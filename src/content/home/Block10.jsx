@@ -1,4 +1,5 @@
 import Swipers from "@/components/Home/Swiper/Swipers";
+import { TopTrendingDatas } from "@/constant/Home/TopTrendingData";
 
 const Block10 = () => {
   return (
@@ -7,7 +8,7 @@ const Block10 = () => {
             <div className="text-[25px] font-bold">TOP TRENDING</div>
           </div>
       <div className="container mx-auto py-6" >
-        <Swipers />
+        <Swipers data={TopTrendingDatas} />
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Accordion,
   AccordionDetails,
@@ -12,20 +12,56 @@ import {
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { FilterDatas } from "@/constant/Products/FilterData";
 
-const FilterAccordian = () => {
+const FilterAccordian = ({ 
+  filters = {
+    categories: [],
+    sizes: [],
+    colors: [],
+    priceRange: [0, 45999],
+    discount: [],
+    gender: [],
+  },
+  onFiltersChange,
+  filterCounts = {
+    gender: {},
+    color: {},
+    discount: {},
+    category: {},
+    size: {},
+  }
+}) => {
   const [expandedIndexes, setExpandedIndexes] = useState([]);
-  const [priceRange, setPriceRange] = useState([199, 45999]);
+  const [localPriceRange, setLocalPriceRange] = useState(filters.priceRange || [0, 45999]);
+  const [selectedCategories, setSelectedCategories] = useState(filters.categories || []);
+  const [selectedSizes, setSelectedSizes] = useState(filters.sizes || []);
+  const [selectedColors, setSelectedColors] = useState(filters.colors || []);
+  const [selectedDiscounts, setSelectedDiscounts] = useState(filters.discount || []);
+  const [selectedGenders, setSelectedGenders] = useState(filters.gender || []);
 
-  // Handle slider change
+  // Sync local state with props
+  useEffect(() => {
+    setLocalPriceRange(filters.priceRange || [0, 45999]);
+    setSelectedCategories(filters.categories || []);
+    setSelectedSizes(filters.sizes || []);
+    setSelectedColors(filters.colors || []);
+    setSelectedDiscounts(filters.discount || []);
+    setSelectedGenders(filters.gender || []);
+  }, [filters]);
+
+  // Handle price slider change
   const handlePriceChange = (event, newValue) => {
-    setPriceRange(newValue);
+    setLocalPriceRange(newValue);
+    if (onFiltersChange) {
+      onFiltersChange({
+        ...filters,
+        priceRange: newValue,
+      });
+    }
   };
 
-  // Handle manual input change
+  // Handle manual price input change
   const handleInputChange = (index, value) => {
-    let newPriceRange = [...priceRange];
-
-    // Allow only numbers
+    let newPriceRange = [...localPriceRange];
     const numericValue = value.replace(/\D/g, "");
 
     if (numericValue === "") {
@@ -33,34 +69,107 @@ const FilterAccordian = () => {
     } else {
       const parsedValue = parseInt(numericValue, 10);
       if (index === 0) {
-        newPriceRange[index] = Math.max(
-          0,
-          Math.min(parsedValue, priceRange[1])
-        ); // Min value now starts from 0
+        newPriceRange[index] = Math.max(0, Math.min(parsedValue, localPriceRange[1]));
       } else {
-        newPriceRange[index] = Math.min(
-          45999,
-          Math.max(parsedValue, priceRange[0])
-        );
+        newPriceRange[index] = Math.min(45999, Math.max(parsedValue, localPriceRange[0]));
       }
     }
 
-    setPriceRange(newPriceRange);
+    setLocalPriceRange(newPriceRange);
+    if (onFiltersChange) {
+      onFiltersChange({
+        ...filters,
+        priceRange: newPriceRange,
+      });
+    }
   };
 
-  // Handle input blur (fallback to valid min/max values)
+  // Handle input blur
   const handleInputBlur = (index) => {
-    let newPriceRange = [...priceRange];
-
+    let newPriceRange = [...localPriceRange];
     if (newPriceRange[index] === "" || isNaN(newPriceRange[index])) {
-      newPriceRange[index] = index === 0 ? 199 : 45999;
+      newPriceRange[index] = index === 0 ? 0 : 45999;
     }
+    setLocalPriceRange(newPriceRange);
+    if (onFiltersChange) {
+      onFiltersChange({
+        ...filters,
+        priceRange: newPriceRange,
+      });
+    }
+  };
 
-    setPriceRange(newPriceRange);
+  // Handle category checkbox
+  const handleCategoryToggle = (value) => {
+    const newCategories = selectedCategories.includes(value)
+      ? selectedCategories.filter((c) => c !== value)
+      : [...selectedCategories, value];
+    setSelectedCategories(newCategories);
+    if (onFiltersChange) {
+      onFiltersChange({
+        ...filters,
+        categories: newCategories,
+      });
+    }
+  };
+
+  // Handle size selection
+  const handleSizeToggle = (value) => {
+    const newSizes = selectedSizes.includes(value)
+      ? selectedSizes.filter((s) => s !== value)
+      : [...selectedSizes, value];
+    setSelectedSizes(newSizes);
+    if (onFiltersChange) {
+      onFiltersChange({
+        ...filters,
+        sizes: newSizes,
+      });
+    }
+  };
+
+  // Handle color selection
+  const handleColorToggle = (value) => {
+    const newColors = selectedColors.includes(value)
+      ? selectedColors.filter((c) => c !== value)
+      : [...selectedColors, value];
+    setSelectedColors(newColors);
+    if (onFiltersChange) {
+      onFiltersChange({
+        ...filters,
+        colors: newColors,
+      });
+    }
+  };
+
+  // Handle discount checkbox
+  const handleDiscountToggle = (value) => {
+    const newDiscounts = selectedDiscounts.includes(value)
+      ? selectedDiscounts.filter((d) => d !== value)
+      : [...selectedDiscounts, value];
+    setSelectedDiscounts(newDiscounts);
+    if (onFiltersChange) {
+      onFiltersChange({
+        ...filters,
+        discount: newDiscounts,
+      });
+    }
+  };
+
+  // Handle gender checkbox
+  const handleGenderToggle = (value) => {
+    const newGenders = selectedGenders.includes(value)
+      ? selectedGenders.filter((g) => g !== value)
+      : [...selectedGenders, value];
+    setSelectedGenders(newGenders);
+    if (onFiltersChange) {
+      onFiltersChange({
+        ...filters,
+        gender: newGenders,
+      });
+    }
   };
 
   return (
-    <>
     <div className="w-full">
       {FilterDatas.map((section, index) => (
         <Accordion
@@ -78,23 +187,30 @@ const FilterAccordian = () => {
             expandIcon={<ExpandMoreIcon />}
             aria-controls={`panel${index}-content`}
             id={`panel${index}-header`}>
-            <Typography variant="h6">{section.title}</Typography>
+            <Typography variant="h6" className="font-bold">{section.title}</Typography>
           </AccordionSummary>
           <AccordionDetails sx={{ paddingBottom: "16px" }}>
             {section.title === "Category" && (
               <div className="w-full flex flex-col">
-                {section.items.map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <Checkbox
-                      size="medium"
-                      sx={{ "&.Mui-checked": { color: "#191919" } }}
-                    />
-                    <div className="flex gap-1 cursor-pointer">
-                      <span>{item.name}</span>
-                      <span className="text-[#B8B8B8]">{item.count}</span>
+                {section.items.map((item, idx) => {
+                  const count = filterCounts.category[item.value] || 0;
+                  return (
+                    <div key={idx} className="flex items-center gap-2">
+                      <Checkbox
+                        checked={selectedCategories.includes(item.value)}
+                        onChange={() => handleCategoryToggle(item.value)}
+                        size="medium"
+                        sx={{ "&.Mui-checked": { color: "#191919" } }}
+                      />
+                      <div 
+                        className="flex gap-1 cursor-pointer"
+                        onClick={() => handleCategoryToggle(item.value)}>
+                        <span>{item.name}</span>
+                        <span className="text-[#B8B8B8]">[{count}]</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 
@@ -107,10 +223,10 @@ const FilterAccordian = () => {
                     </span>
                     <input
                       type="text"
-                      value={priceRange[0]}
+                      value={localPriceRange[0]}
                       onChange={(e) => handleInputChange(0, e.target.value)}
                       onBlur={() => handleInputBlur(0)}
-                      className="w-full h-[60px] pl-7 pr-2 border border-black rounded"
+                      className="w-full h-[60px] pl-7 pr-2 border border-black rounded cursor-text"
                     />
                   </div>
 
@@ -120,10 +236,10 @@ const FilterAccordian = () => {
                     </span>
                     <input
                       type="text"
-                      value={priceRange[1]}
+                      value={localPriceRange[1]}
                       onChange={(e) => handleInputChange(1, e.target.value)}
                       onBlur={() => handleInputBlur(1)}
-                      className="w-full h-[60px] pl-7 pr-2 border border-black rounded"
+                      className="w-full h-[60px] pl-7 pr-2 border border-black rounded cursor-text"
                     />
                   </div>
                 </div>
@@ -131,38 +247,23 @@ const FilterAccordian = () => {
                 <Slider
                   min={0}
                   max={45999}
-                  value={priceRange}
+                  value={localPriceRange}
                   onChange={handlePriceChange}
                   valueLabelDisplay="off"
                   sx={{
                     "& .MuiSlider-thumb": {
-                      backgroundColor: "black", // Thumb color
+                      backgroundColor: "black",
                       width: "30px",
                       height: "30px",
                     },
                     "& .MuiSlider-track": {
-                      backgroundColor: "black", // Track color
+                      backgroundColor: "black",
                     },
                     "& .MuiSlider-rail": {
-                      backgroundColor: "#ccc", // Rail color
+                      backgroundColor: "#ccc",
                     },
-                    "& .MuiSlider-thumb:hover, & .MuiSlider-thumb.Mui-focusVisible, & .MuiSlider-thumb.Mui-active":
-                      {
-                        boxShadow: "none",
-                      },
-                    // Scrollbar styling for overflow in case of horizontal scrolling
-                    "&::-webkit-scrollbar": {
-                      height: "6px",
-                    },
-                    "&::-webkit-scrollbar-track": {
-                      background: "#black",
-                    },
-                    "&::-webkit-scrollbar-thumb": {
-                      background: "black",
-                      borderRadius: "6px",
-                    },
-                    "&::-webkit-scrollbar-thumb:hover": {
-                      background: "#black",
+                    "& .MuiSlider-thumb:hover, & .MuiSlider-thumb.Mui-focusVisible, & .MuiSlider-thumb.Mui-active": {
+                      boxShadow: "none",
                     },
                   }}
                 />
@@ -171,18 +272,25 @@ const FilterAccordian = () => {
 
             {section.title === "Gender" && (
               <div className="w-full flex flex-col">
-                {section.items.map((item, idxs) => (
-                  <div key={idxs} className="flex items-center gap-2">
-                    <Checkbox
-                      size="medium"
-                      sx={{ "&.Mui-checked": { color: "#191919" } }}
-                    />
-                    <div className="flex gap-1 cursor-pointer">
-                      <span>{item.name}</span>
-                      <span className="text-[#B8B8B8]">{item.count}</span>
+                {section.items.map((item, idxs) => {
+                  const count = filterCounts.gender[item.value] || 0;
+                  return (
+                    <div key={idxs} className="flex items-center gap-2">
+                      <Checkbox
+                        checked={selectedGenders.includes(item.value)}
+                        onChange={() => handleGenderToggle(item.value)}
+                        size="medium"
+                        sx={{ "&.Mui-checked": { color: "#191919" } }}
+                      />
+                      <div 
+                        className="flex gap-1 cursor-pointer"
+                        onClick={() => handleGenderToggle(item.value)}>
+                        <span>{item.name}</span>
+                        <span className="text-[#B8B8B8]">[{count}]</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 
@@ -190,8 +298,13 @@ const FilterAccordian = () => {
               <div className="w-full grid grid-cols-5 gap-5">
                 {section.items.map((item, ind) => (
                   <div
-                    className="w-full border border-[#DFE0E1] flex items-center justify-center p-2 cursor-pointer hover:border-black"
-                    key={ind}>
+                    key={ind}
+                    onClick={() => handleSizeToggle(item.value)}
+                    className={`w-full border flex items-center justify-center p-2 cursor-pointer transition-colors ${
+                      selectedSizes.includes(item.value)
+                        ? "border-black bg-black text-white"
+                        : "border-[#DFE0E1] hover:border-black"
+                    }`}>
                     {item.name}
                   </div>
                 ))}
@@ -200,51 +313,67 @@ const FilterAccordian = () => {
 
             {section.title === "Color" && (
               <div className="w-full grid grid-cols-4 gap-2 pl-5">
-                {section.items.map((item, ind) => (
-                  <div
-                    key={ind}
-                    className="flex flex-col items-center gap-2 cursor-pointer px-2 min-w-[80px]">
+                {section.items.map((item, ind) => {
+                  const count = filterCounts.color[item.value] || 0;
+                  return (
                     <div
-                      className="w-10 h-10 border rounded-full border-[#000000] flex items-center"
-                      style={{
-                        background:
-                          item.value === "multi-colored"
-                            ? "linear-gradient(45deg, red, blue, yellow, green)"
-                            : item.bgColor,
-                      }}></div>
+                      key={ind}
+                      onClick={() => handleColorToggle(item.value)}
+                      className={`flex flex-col items-center gap-2 cursor-pointer px-2 min-w-[80px] ${
+                        selectedColors.includes(item.value) ? "opacity-100" : "opacity-70 hover:opacity-100"
+                      }`}>
+                      <div
+                        className={`w-10 h-10 border rounded-full flex items-center ${
+                          selectedColors.includes(item.value)
+                            ? "border-2 border-black ring-2 ring-gray-400"
+                            : "border border-gray-300"
+                        }`}
+                        style={{
+                          background:
+                            item.value === "multi-colored"
+                              ? "linear-gradient(45deg, red, blue, yellow, green)"
+                              : item.bgColor,
+                        }}></div>
 
-                    <div className="flex gap-1 items-center text-[15px] pb-2 justify-center whitespace-nowrap">
-                      <span>{item.name}</span>
-                      <span className="text-gray-500 text-[14px]">
-                        {item.count}
-                      </span>
+                      <div className="flex gap-1 items-center text-[15px] pb-2 justify-center whitespace-nowrap">
+                        <span>{item.name}</span>
+                        <span className="text-gray-500 text-[14px]">
+                          [{count}]
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 
             {section.title === "Discount" && (
               <div className="w-full flex flex-col">
-                {section.items.map((item, idxs) => (
-                  <div key={idxs} className="flex items-center gap-2">
-                    <Checkbox
-                      size="medium"
-                      sx={{ "&.Mui-checked": { color: "#191919" } }}
-                    />
-                    <div className="flex gap-1 cursor-pointer">
-                      <span>{item.name}</span>
-                      <span className="text-[#B8B8B8]">{item.count}</span>
+                {section.items.map((item, idxs) => {
+                  const count = filterCounts.discount[item.value] || 0;
+                  return (
+                    <div key={idxs} className="flex items-center gap-2">
+                      <Checkbox
+                        checked={selectedDiscounts.includes(item.value)}
+                        onChange={() => handleDiscountToggle(item.value)}
+                        size="medium"
+                        sx={{ "&.Mui-checked": { color: "#191919" } }}
+                      />
+                      <div 
+                        className="flex gap-1 cursor-pointer"
+                        onClick={() => handleDiscountToggle(item.value)}>
+                        <span>{item.name}%</span>
+                        <span className="text-[#B8B8B8]">[{count}]</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </AccordionDetails>
         </Accordion>
       ))}
     </div>
-    </>
   );
 };
 

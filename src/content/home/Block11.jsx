@@ -1,4 +1,5 @@
 import Swipers from "@/components/Home/Swiper/Swipers";
+import { RecentlyViewedDatas } from "@/constant/Home/RecentlyViewedData";
 
 const Block11 = () => {
   return (
@@ -7,7 +8,7 @@ const Block11 = () => {
             <div className="text-[25px] font-bold">RECENTLY VIEWED BY YOU</div>
           </div>
       <div className="container mx-auto py-6" >
-        <Swipers />
+        <Swipers data={RecentlyViewedDatas} />
       </div>
     </div>
   );

@@ -13,7 +13,7 @@ const Block6 = () => {
             <Link
               href={item.href} 
               key={index} 
-              className="relative w-[60%] sm:w-[45%] md:w-[32%] lg:w-[33%] flex-shrink-0"
+              className="relative w-[60%] sm:w-[45%] md:w-[32%] lg:w-[33%] flex-shrink-0 cursor-pointer"
             >
               <div className="relative w-full h-[400px] sm:h-[450px] lg:h-[650px]">
                 <Image

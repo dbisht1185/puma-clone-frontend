@@ -38,3 +38,18 @@ body {
   transition: all 300mscubic-bezier(0.4, 0, 0.2, 1) 0ms;
   background-color: #1976d2;
 }
+
+/* Ensure all clickable elements have pointer cursor */
+a, button, [role="button"], input[type="checkbox"], input[type="radio"], select, label {
+  cursor: pointer;
+}
+
+/* Exceptions for disabled elements */
+button:disabled, input:disabled, select:disabled, [aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+/* Text inputs should have text cursor */
+input[type="text"], input[type="email"], input[type="tel"], input[type="password"], input[type="number"], textarea {
+  cursor: text;
+}

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const Block5 = () => {
   return (
     <div className="w-full flex flex-col gap-5 mt-5 ">
@@ -8,7 +10,7 @@ const Block5 = () => {
       </div>
 
       <div className="w-full flex gap-4 px-4 md:px-10 lg:gap-6">
-        <div className="w-[calc(50%-0.5rem)] relative aspect-[3/4]">
+        <Link href="/products/footwear" className="w-[calc(50%-0.5rem)] relative aspect-[3/4] cursor-pointer">
           <div
             className="absolute inset-0 bg-no-repeat bg-cover bg-center flex flex-col items-end justify-end p-4 md:p-8"
             style={{
@@ -21,9 +23,9 @@ const Block5 = () => {
               </h1>
             </div>
           </div>
-        </div>
+        </Link>
 
-        <div className="w-[calc(50%-0.5rem)] relative aspect-[3/4]">
+        <Link href="/products/footwear" className="w-[calc(50%-0.5rem)] relative aspect-[3/4] cursor-pointer">
           <div
             className="absolute inset-0 bg-no-repeat bg-cover bg-center flex flex-col items-end justify-end p-4 md:p-8"
             style={{
@@ -36,7 +38,7 @@ const Block5 = () => {
               </h1>
             </div>
           </div>
-        </div>
+        </Link>
       </div>
     </div>
   );

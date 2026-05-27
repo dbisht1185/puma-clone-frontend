@@ -3,6 +3,7 @@
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Scrollbar,Mousewheel } from "swiper/modules";
 import React from "react";
+import Link from "next/link";
 
 import "swiper/css";
 import "swiper/css/scrollbar";
@@ -10,7 +11,7 @@ import "swiper/css/navigation";
 import "swiper/css/mousewheel";
 import { HotWeelsDatas } from "@/constant/Home/Block9Data";
 
-const Swipers = () => {
+const Swipers = ({ data = HotWeelsDatas }) => {
   return (
     <div className="relative px-2">
       <Swiper
@@ -28,21 +29,34 @@ const Swipers = () => {
           1024: { slidesPerView: 4.2 }, // Laptops
         }}
       >
-        {HotWeelsDatas.map((item, index) => (
-          <SwiperSlide key={index}>
-            <div className="text-center flex flex-col gap-4 w-full max-w-xs mx-auto cursor-pointer">
-              <img
-                src={item.img}
-                alt={item.title}
-                className="w-full h-auto object-cover"
-              />
-              <div className="flex justify-between w-full text-left px-2">
-                <h1 className="text-sm font-bold">{item.name}</h1>
-                <h2 className="text-sm font-bold">{item.price}</h2>
-              </div>
-            </div>
-          </SwiperSlide>
-        ))}
+        {data.map((item, index) => {
+          // Generate a slug from the product name
+          const slug = item.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+          return (
+            <SwiperSlide key={index}>
+              <Link href={`/productdetails/${slug}`} className="text-center flex flex-col gap-4 w-full max-w-xs mx-auto cursor-pointer">
+                <img
+                  src={item.img}
+                  alt={item.name}
+                  className="w-full h-auto object-cover"
+                />
+                <div className="flex justify-between w-full text-left px-2">
+                  <h1 className="text-sm font-bold">{item.name}</h1>
+                  <div className="flex flex-col items-end">
+                    {item.offerPrice ? (
+                      <>
+                        <h2 className="text-sm font-bold text-red-600">{item.offerPrice}</h2>
+                        <h2 className="text-xs font-normal text-gray-500 line-through">{item.price}</h2>
+                      </>
+                    ) : (
+                      <h2 className="text-sm font-bold">{item.price}</h2>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            </SwiperSlide>
+          );
+        })}
       </Swiper>
 
       {/* Custom styles for navigation & scrollbar */}

@@ -15,6 +15,8 @@ import { TooltipDatas } from "@/constant/Navbar/TooltipData";
 import { authApi } from "@/mocks/auth";
 import { useToast } from "@/context/toaster";
 import { useRouter } from "next/navigation";
+import { useCart } from "@/context/CartContext";
+import { useWishlist } from "@/context/WishlistContext";
 
 const Navbar = () => {
   const [search, setSearch] = useState(false);
@@ -24,10 +26,15 @@ const Navbar = () => {
   const profileButtonRef = useRef(null);
 
   const router = useRouter();
+  const { getCartTotals } = useCart();
+  const { wishlist } = useWishlist();
 
   const storedToken = typeof window !== "undefined" ? localStorage.getItem("access Token") : null;
 
   const toastContext = useToast();
+  
+  const { itemCount } = getCartTotals();
+  const wishlistCount = wishlist.length;
 
   if (!toastContext) {
     throw new Error("useToast must be used within a ToastProvider");
@@ -146,14 +153,14 @@ const Navbar = () => {
 
       {/* Mobile Logo */}
       <div className="block lg:hidden">
-        <Link href="/">
+        <Link href="/" className="cursor-pointer">
           <SiPuma size={44} />
         </Link>
       </div>
 
       {/* Desktop Menu */}
       <div className="hidden lg:flex items-center space-x-5 font-bold">
-        <Link href="/" className="text-white">
+        <Link href="/" className="text-white cursor-pointer">
           <SiPuma size={34} />
         </Link>
         <DropdownMenu show={show} setShow={setShow} />
@@ -165,7 +172,7 @@ const Navbar = () => {
             className="relative h-20 flex items-center">
             <Link
               href={item.href}
-              className="hover:border-[#8A7350] hover:border-b-2 hover:text-white transition text-[16px]">
+              className="hover:border-[#8A7350] hover:border-b-2 hover:text-white transition text-[16px] cursor-pointer">
               {item.name} {item.icon}
             </Link>
           </div>
@@ -183,16 +190,28 @@ const Navbar = () => {
           </button>
           <Link
             href="/wishlist"
-            className="p-3 rounded-full hover:bg-[#404040] transition-all">
-            <FaRegHeart size={20} />
+            className="p-3 rounded-full hover:bg-[#404040] transition-all cursor-pointer"
+            aria-label={`Wishlist with ${wishlistCount} items`}>
+            <Badge 
+              badgeContent={wishlistCount} 
+              color="error"
+              showZero={false}
+              max={99}>
+              <FaRegHeart size={20} />
+            </Badge>
           </Link>
         </div>
 
         <div className="flex flex-row-reverse lg:flex-row lg:gap-3 gap-0">
           <Link
             href="/cart"
-            className="p-3 rounded-full hover:bg-[#404040] transition-all">
-            <Badge badgeContent={2} color="error">
+            className="p-3 rounded-full hover:bg-[#404040] transition-all cursor-pointer"
+            aria-label={`Shopping cart with ${itemCount} items`}>
+            <Badge 
+              badgeContent={itemCount} 
+              color="error"
+              showZero={false}
+              max={99}>
               <IoCartOutline size={25} />
             </Badge>
           </Link>
@@ -244,13 +263,13 @@ const Navbar = () => {
                     <Link
                       href="/login"
                       onClick={handleLinkClick}
-                      className="bg-black text-white py-2 text-center hover:bg-[#3b4047] transition-colors text-[16px] font-bold">
+                      className="bg-black text-white py-2 text-center hover:bg-[#3b4047] transition-colors text-[16px] font-bold cursor-pointer">
                       LOGIN
                     </Link>
                     <Link
                       href="/signup"
                       onClick={handleLinkClick}
-                      className="border py-2 text-center hover:bg-gray-100 transition-colors text-[16px] font-bold">
+                      className="border py-2 text-center hover:bg-gray-100 transition-colors text-[16px] font-bold cursor-pointer">
                       JOIN US
                     </Link>
                   </div>

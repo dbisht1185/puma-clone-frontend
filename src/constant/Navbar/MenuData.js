@@ -241,6 +241,176 @@ export const menuDats = {
         },
       ],
     },
-    
+    Motorsports: {
+      title: "Motorsports",
+      sections: [
+        {
+          heading: "Featured",
+          links: [
+            "Scuderia Ferrari",
+            "BMW M Motorsport",
+            "Motorsport Collection",
+            "Racing Heritage",
+          ],
+        },
+        {
+          heading: "Shoes",
+          links: [
+            "Motorsport Sneakers",
+            "Racing Shoes",
+            "Driving Shoes",
+            "Motorsport Boots",
+          ],
+        },
+        {
+          heading: "Clothing",
+          links: [
+            "Motorsport T-Shirts",
+            "Racing Jackets",
+            "Motorsport Hoodies",
+            "Racing Pants",
+            "Motorsport Caps",
+          ],
+        },
+        {
+          heading: "Accessories",
+          links: [
+            "Motorsport Bags",
+            "Racing Gloves",
+            "Motorsport Watches",
+            "Racing Accessories",
+          ],
+        },
+      ],
+    },
+    Collaborations: {
+      title: "Collaborations",
+      sections: [
+        {
+          heading: "Featured Collaborations",
+          links: [
+            "PUMA x AC MILAN",
+            "PUMA x OFF-WHITE",
+            "PUMA x TMNT",
+            "PUMA x TMTN",
+            "PUMA x HOT WHEELS",
+            "PUMA x RCB",
+            "PUMA x DELHI CAPITALS",
+          ],
+        },
+        {
+          heading: "Limited Edition",
+          links: [
+            "Exclusive Drops",
+            "Collector's Items",
+            "Special Releases",
+            "Collaboration Archive",
+          ],
+        },
+        {
+          heading: "Shop by Category",
+          links: [
+            "Collaboration Shoes",
+            "Collaboration Clothing",
+            "Collaboration Accessories",
+            "Kids Collaborations",
+          ],
+        },
+      ],
+    },
+    Kids: {
+      title: "Kids Collection",
+      sections: [
+        {
+          heading: "Featured",
+          links: [
+            "New Arrivals",
+            "Best Sellers",
+            "PUMA x HOT WHEELS",
+            "PUMA x TMNT",
+            "Sale",
+          ],
+        },
+        {
+          heading: "Shoes",
+          links: [
+            "Running Shoes",
+            "Sneakers",
+            "Training Shoes",
+            "Sandals & Slides",
+            "School Shoes",
+          ],
+        },
+        {
+          heading: "Clothing",
+          links: [
+            "T-Shirts & Tops",
+            "Hoodies & Sweatshirts",
+            "Jackets",
+            "Pants & Joggers",
+            "Shorts",
+            "Tracksuits",
+          ],
+        },
+        {
+          heading: "Accessories",
+          links: [
+            "Backpacks",
+            "Caps & Beanies",
+            "Socks",
+            "Water Bottles",
+            "Kids Bags",
+          ],
+        },
+        {
+          heading: "Shop by Age",
+          links: [
+            "Toddler (2-4 Years)",
+            "Little Kids (4-8 Years)",
+            "Big Kids (8-12 Years)",
+          ],
+        },
+      ],
+    },
+    Outlet: {
+      title: "Outlet",
+      sections: [
+        {
+          heading: "Shop by Category",
+          links: [
+            "Outlet Shoes",
+            "Outlet Clothing",
+            "Outlet Accessories",
+            "Clearance Items",
+          ],
+        },
+        {
+          heading: "Shop by Gender",
+          links: [
+            "Men's Outlet",
+            "Women's Outlet",
+            "Kids Outlet",
+            "Unisex Outlet",
+          ],
+        },
+        {
+          heading: "Special Offers",
+          links: [
+            "Up to 50% Off",
+            "Up to 70% Off",
+            "Last Chance",
+            "Final Sale",
+          ],
+        },
+        {
+          heading: "Shop by Size",
+          links: [
+            "Limited Sizes Available",
+            "Size Guide",
+            "Find Your Size",
+          ],
+        },
+      ],
+    },
   };
   

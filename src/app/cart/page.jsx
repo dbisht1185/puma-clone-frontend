@@ -8,15 +8,23 @@ import Link from "next/link";
 import CardDetails from "@/components/cart/CardDetails";
 import ApplyPromo from "@/components/cart/ApplyPromo";
 import TotalPrice from "@/components/cart/TotalPrice";
+import BonusItemSelector from "@/components/cart/BonusItemSelector";
+import { useCart } from "@/context/CartContext";
+import { useState } from "react";
 
 const Page = () => {
+  const { cart, getCartTotals } = useCart();
+  const [promoDiscount, setPromoDiscount] = useState(0);
+  const [bonusItemOpen, setBonusItemOpen] = useState(false);
+  const { itemCount } = getCartTotals();
+
   return (
     <>
       <div className="w-full lg:px-10 lg:py-10 px-5 py-5 flex flex-col gap-5">
         <div className="w-full text-[32px] font-bold">
           {" "}
           My Shopping Cart{" "}
-          <span className="text-[32px] font-bold text-[#6c6c6c]">(2)</span>
+          <span className="text-[32px] font-bold text-[#6c6c6c]">({itemCount})</span>
         </div>
         <div className="w-full grid lg:grid-cols-10 grid-cols-5 gap-10 ">
           <div className="grid lg:col-span-6 col-span-6">
@@ -41,22 +49,36 @@ const Page = () => {
                 </div>
               </div>
               <div className="w-full rounded-[2px]">
-                <ApplyPromo />
+                <ApplyPromo onPromoApplied={setPromoDiscount} />
               </div>
 
-              <div className="border border-[#dfe0e1] rounded-[2px] flex gap-2 items-center justify-center text-white cursor-pointer py-2 bg-[#999999]">
+              <button
+                onClick={() => setBonusItemOpen(true)}
+                className="border border-[#dfe0e1] rounded-[2px] flex gap-2 items-center justify-center text-white cursor-pointer py-2 bg-[#999999] hover:bg-[#888888] transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 w-full"
+                aria-label="Select bonus items">
                 <div className="font-bold text-xl">
                   <GoGift />
                 </div>
                 <div className="font-bold text-[16px]">
                   CLICK HERE TO SELECT BONUS ITEM
                 </div>
-              </div>
+              </button>
+              
+              <BonusItemSelector
+                open={bonusItemOpen}
+                onClose={() => setBonusItemOpen(false)}
+              />
 
-              <TotalPrice />
+              <TotalPrice promoDiscount={promoDiscount} />
               <Link
-                href={"/checkout"}
-                className="w-full border text-lg font-bold text-white bg-[#181818] hover:bg-[#3b4047] rounded-[2px] py-4 cursor-pointer text-center">
+                href={cart.length > 0 ? "/checkout" : "#"}
+                className={`w-full border text-lg font-bold text-white rounded-[2px] py-4 cursor-pointer text-center ${
+                  cart.length > 0
+                    ? "bg-[#181818] hover:bg-[#3b4047]"
+                    : "bg-gray-400 cursor-not-allowed"
+                }`}
+                aria-disabled={cart.length === 0}
+                data-testid="checkout-link">
                 CHECKOUT
               </Link>
 

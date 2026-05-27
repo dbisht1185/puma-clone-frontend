@@ -16,7 +16,7 @@ import React from 'react'
 const page = () => {
   return (
     <div className=''>
-      // <HeroSection/>
+      <HeroSection/>
       <Block1/>
       <Block2/>
       <Block3/>
@@ -24,7 +24,7 @@ const page = () => {
       <Block5/>
       <Block6/>
       <Block7/>
-      <Block8/>
+      {/* <Block8/> */}
       <Block9/>
       <Block10/>
       <Block11/>

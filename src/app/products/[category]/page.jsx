@@ -12,29 +12,551 @@ import Cards from "@/components/Products/Cards";
 import { MdKeyboardArrowLeft } from "react-icons/md";
 import Link from "next/link";
 import Desription from "@/components/Products/Desription";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
+import { CardDatas } from "@/constant/Products/Cards";
+import { useMemo, useState, useCallback, useEffect } from "react";
+import { debounce } from "@/utils/debounce";
+import { parsePrice } from "@/utils/price";
 
 const Page = () => {
-
   const params = useParams();
-
-  // console.log("paramas", params.category)
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
   const [open, setOpen] = React.useState(false);
-  const [sortOption, setSortOption] = React.useState("");
+  const [sortOption, setSortOption] = React.useState(searchParams.get("sort") || "");
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
+  const [filters, setFilters] = useState({
+    categories: searchParams.get("categories")?.split(",").filter(Boolean) || [],
+    sizes: searchParams.get("sizes")?.split(",").filter(Boolean) || [],
+    colors: searchParams.get("colors")?.split(",").filter(Boolean) || [],
+    priceRange: [parseInt(searchParams.get("minPrice")) || 0, parseInt(searchParams.get("maxPrice")) || 45999],
+    discount: searchParams.get("discount")?.split(",").filter(Boolean) || [],
+    gender: searchParams.get("gender")?.split(",").filter(Boolean) || [],
+  });
+  const [displayCount, setDisplayCount] = useState(20);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const toggleDrawer = (newOpen) => () => {
     setOpen(newOpen);
   };
   const isSmallScreen = useMediaQuery("(max-width: 500px)");
 
+  // Update URL when filters/sort/search change
+  const updateURL = useCallback((updates) => {
+    const urlParams = new URLSearchParams(searchParams.toString());
+    
+    if (updates.searchQuery !== undefined) {
+      if (updates.searchQuery) urlParams.set("q", updates.searchQuery);
+      else urlParams.delete("q");
+    }
+    
+    if (updates.sortOption !== undefined) {
+      if (updates.sortOption) urlParams.set("sort", updates.sortOption);
+      else urlParams.delete("sort");
+    }
+    
+    router.push(`/products/${params.category}?${urlParams.toString()}`, { scroll: false });
+  }, [searchParams, router, params.category]);
+
+  // Debounced search
+  const debouncedSearch = useMemo(
+    () => debounce((query) => updateURL({ searchQuery: query }), 300),
+    [updateURL]
+  );
+
+  // Update URL with filter params
+  const updateFiltersURL = useCallback((newFilters) => {
+    const urlParams = new URLSearchParams(searchParams.toString());
+    
+    if (newFilters.categories.length > 0) {
+      urlParams.set("categories", newFilters.categories.join(","));
+    } else {
+      urlParams.delete("categories");
+    }
+    
+    if (newFilters.sizes.length > 0) {
+      urlParams.set("sizes", newFilters.sizes.join(","));
+    } else {
+      urlParams.delete("sizes");
+    }
+    
+    if (newFilters.colors.length > 0) {
+      urlParams.set("colors", newFilters.colors.join(","));
+    } else {
+      urlParams.delete("colors");
+    }
+    
+    if (newFilters.discount.length > 0) {
+      urlParams.set("discount", newFilters.discount.join(","));
+    } else {
+      urlParams.delete("discount");
+    }
+    
+    if (newFilters.gender.length > 0) {
+      urlParams.set("gender", newFilters.gender.join(","));
+    } else {
+      urlParams.delete("gender");
+    }
+    
+    if (newFilters.priceRange[0] > 0 || newFilters.priceRange[1] < 45999) {
+      urlParams.set("minPrice", newFilters.priceRange[0].toString());
+      urlParams.set("maxPrice", newFilters.priceRange[1].toString());
+    } else {
+      urlParams.delete("minPrice");
+      urlParams.delete("maxPrice");
+    }
+    
+    router.push(`/products/${params.category}?${urlParams.toString()}`, { scroll: false });
+  }, [searchParams, router, params.category]);
+
+  // Handle filter changes
+  const handleFiltersChange = useCallback((newFilters) => {
+    setFilters(newFilters);
+    updateFiltersURL(newFilters);
+  }, [updateFiltersURL]);
+
+  // Calculate all filter counts based on current filtered products (before applying that specific filter)
+  const filterCounts = useMemo(() => {
+    // Start with products filtered by search and price
+    let baseFiltered = [...CardDatas];
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      baseFiltered = baseFiltered.filter(
+        (item) =>
+          item.name?.toLowerCase().includes(query) ||
+          item.description?.toLowerCase().includes(query)
+      );
+    }
+
+    // Apply price filter (if not default)
+    if (filters.priceRange[0] > 0 || filters.priceRange[1] < 45999) {
+      baseFiltered = baseFiltered.filter((item) => {
+        const price = parsePrice(item.offerPrice || item.price);
+        return price >= filters.priceRange[0] && price <= filters.priceRange[1];
+      });
+    }
+
+    // Apply other active filters (except the one being counted)
+    // For gender counts, exclude gender filter
+    let genderFiltered = baseFiltered.filter((item) => {
+      if (filters.colors.length > 0) {
+        const itemName = item.name?.toLowerCase() || "";
+        const matchesColor = filters.colors.some((color) => {
+          const colorMap = {
+            black: ["black", "navy"],
+            white: ["white"],
+            gray: ["gray", "grey"],
+            blue: ["blue"],
+            red: ["red"],
+            green: ["green"],
+            yellow: ["yellow"],
+            orange: ["orange"],
+            purple: ["purple"],
+            brown: ["brown", "tan"],
+            pink: ["pink"],
+            "multi-colored": ["multi"],
+          };
+          const keywords = colorMap[color] || [color];
+          return keywords.some((keyword) => itemName.includes(keyword));
+        });
+        if (!matchesColor) return false;
+      }
+
+      if (filters.discount.length > 0) {
+        if (!item.offerPrice) return false;
+        const basePrice = parsePrice(item.price);
+        const offerPrice = parsePrice(item.offerPrice);
+        const discountPercent = ((basePrice - offerPrice) / basePrice) * 100;
+        const matchesDiscount = filters.discount.some((discountFilter) => {
+          if (discountFilter === "15") return discountPercent >= 15 && discountPercent < 20;
+          if (discountFilter === "less-than-20") return discountPercent < 20;
+          if (discountFilter === "20-29") return discountPercent >= 20 && discountPercent < 30;
+          if (discountFilter === "30-39") return discountPercent >= 30 && discountPercent < 40;
+          return false;
+        });
+        if (!matchesDiscount) return false;
+      }
+
+      return true;
+    });
+
+    // For color counts, exclude color filter
+    let colorFiltered = baseFiltered.filter((item) => {
+      if (filters.gender.length > 0) {
+        const itemGender = item.gender || "unisex-adults";
+        const matchesGender = filters.gender.some((selectedGender) => {
+          if (selectedGender === "boys") return itemGender === "boys" || itemGender === "unisex-kids";
+          if (selectedGender === "female") return itemGender === "female" || itemGender === "women";
+          if (selectedGender === "male") return itemGender === "male" || itemGender === "men";
+          if (selectedGender === "unisex") return itemGender === "unisex" || itemGender === "unisex-adults";
+          if (selectedGender === "unisex-adults") return itemGender === "unisex-adults";
+          if (selectedGender === "unisex-kids") return itemGender === "unisex-kids";
+          return itemGender === selectedGender;
+        });
+        if (!matchesGender) return false;
+      }
+
+      if (filters.discount.length > 0) {
+        if (!item.offerPrice) return false;
+        const basePrice = parsePrice(item.price);
+        const offerPrice = parsePrice(item.offerPrice);
+        const discountPercent = ((basePrice - offerPrice) / basePrice) * 100;
+        const matchesDiscount = filters.discount.some((discountFilter) => {
+          if (discountFilter === "15") return discountPercent >= 15 && discountPercent < 20;
+          if (discountFilter === "less-than-20") return discountPercent < 20;
+          if (discountFilter === "20-29") return discountPercent >= 20 && discountPercent < 30;
+          if (discountFilter === "30-39") return discountPercent >= 30 && discountPercent < 40;
+          return false;
+        });
+        if (!matchesDiscount) return false;
+      }
+
+      return true;
+    });
+
+    // For discount counts, exclude discount filter
+    let discountFiltered = baseFiltered.filter((item) => {
+      if (filters.gender.length > 0) {
+        const itemGender = item.gender || "unisex-adults";
+        const matchesGender = filters.gender.some((selectedGender) => {
+          if (selectedGender === "boys") return itemGender === "boys" || itemGender === "unisex-kids";
+          if (selectedGender === "female") return itemGender === "female" || itemGender === "women";
+          if (selectedGender === "male") return itemGender === "male" || itemGender === "men";
+          if (selectedGender === "unisex") return itemGender === "unisex" || itemGender === "unisex-adults";
+          if (selectedGender === "unisex-adults") return itemGender === "unisex-adults";
+          if (selectedGender === "unisex-kids") return itemGender === "unisex-kids";
+          return itemGender === selectedGender;
+        });
+        if (!matchesGender) return false;
+      }
+
+      if (filters.colors.length > 0) {
+        const itemName = item.name?.toLowerCase() || "";
+        const matchesColor = filters.colors.some((color) => {
+          const colorMap = {
+            black: ["black", "navy"],
+            white: ["white"],
+            gray: ["gray", "grey"],
+            blue: ["blue"],
+            red: ["red"],
+            green: ["green"],
+            yellow: ["yellow"],
+            orange: ["orange"],
+            purple: ["purple"],
+            brown: ["brown", "tan"],
+            pink: ["pink"],
+            "multi-colored": ["multi"],
+          };
+          const keywords = colorMap[color] || [color];
+          return keywords.some((keyword) => itemName.includes(keyword));
+        });
+        if (!matchesColor) return false;
+      }
+
+      return true;
+    });
+
+    // Gender counts (using genderFiltered - excludes color and discount filters)
+    const genderCounts = {
+      boys: 0,
+      female: 0,
+      male: 0,
+      unisex: 0,
+      "unisex-adults": 0,
+      "unisex-kids": 0,
+    };
+
+    genderFiltered.forEach((item) => {
+      const gender = item.gender || "unisex-adults";
+      if (gender === "boys" || gender === "unisex-kids") {
+        genderCounts.boys++;
+        if (gender === "unisex-kids") genderCounts["unisex-kids"]++;
+      }
+      if (gender === "female" || gender === "women") genderCounts.female++;
+      if (gender === "male" || gender === "men") genderCounts.male++;
+      if (gender === "unisex" || gender === "unisex-adults") {
+        genderCounts.unisex++;
+        if (gender === "unisex-adults") genderCounts["unisex-adults"]++;
+      }
+    });
+
+    // Color counts (using colorFiltered - excludes gender and discount filters)
+    const colorCounts = {
+      black: 0,
+      gray: 0,
+      brown: 0,
+      blue: 0,
+      green: 0,
+      orange: 0,
+      tan: 0,
+      yellow: 0,
+      red: 0,
+      purple: 0,
+      pink: 0,
+      white: 0,
+      "multi-colored": 0,
+    };
+
+    colorFiltered.forEach((item) => {
+      const itemName = item.name?.toLowerCase() || "";
+      const colorMap = {
+        black: ["black", "navy"],
+        white: ["white"],
+        gray: ["gray", "grey"],
+        blue: ["blue"],
+        red: ["red"],
+        green: ["green"],
+        yellow: ["yellow"],
+        orange: ["orange"],
+        purple: ["purple"],
+        brown: ["brown", "tan"],
+        pink: ["pink"],
+        "multi-colored": ["multi"],
+      };
+
+      Object.keys(colorMap).forEach((color) => {
+        const keywords = colorMap[color];
+        if (keywords.some((keyword) => itemName.includes(keyword))) {
+          colorCounts[color]++;
+        }
+      });
+    });
+
+    // Discount counts (using discountFiltered - excludes gender and color filters)
+    const discountCounts = {
+      "15": 0,
+      "less-than-20": 0,
+      "20-29": 0,
+      "30-39": 0,
+    };
+
+    discountFiltered.forEach((item) => {
+      if (!item.offerPrice) return;
+      const basePrice = parsePrice(item.price);
+      const offerPrice = parsePrice(item.offerPrice);
+      const discountPercent = ((basePrice - offerPrice) / basePrice) * 100;
+
+      if (discountPercent >= 15 && discountPercent < 20) discountCounts["15"]++;
+      if (discountPercent < 20) discountCounts["less-than-20"]++;
+      if (discountPercent >= 20 && discountPercent < 30) discountCounts["20-29"]++;
+      if (discountPercent >= 30 && discountPercent < 40) discountCounts["30-39"]++;
+    });
+
+    // Category counts (all products are footwear for now)
+    const categoryCounts = {
+      footwear: baseFiltered.length,
+      apparel: 0,
+      accessories: 0,
+    };
+
+    // Size counts (we don't have size data in products, so return empty or default)
+    const sizeCounts = {};
+
+    return {
+      gender: genderCounts,
+      color: colorCounts,
+      discount: discountCounts,
+      category: categoryCounts,
+      size: sizeCounts,
+    };
+  }, [searchQuery, filters.priceRange, filters.colors, filters.discount, filters.gender]);
+
+  // Filter and sort products
+  const filteredProducts = useMemo(() => {
+    let filtered = [...CardDatas];
+
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (item) =>
+          item.name?.toLowerCase().includes(query) ||
+          item.description?.toLowerCase().includes(query)
+      );
+    }
+
+    // Gender filter
+    if (filters.gender.length > 0) {
+      filtered = filtered.filter((item) => {
+        const itemGender = item.gender || "unisex";
+        return filters.gender.some((selectedGender) => {
+          if (selectedGender === "boys") {
+            return itemGender === "boys" || itemGender === "unisex-kids";
+          }
+          if (selectedGender === "female") {
+            return itemGender === "female" || itemGender === "women";
+          }
+          if (selectedGender === "male") {
+            return itemGender === "male" || itemGender === "men";
+          }
+          if (selectedGender === "unisex") {
+            return itemGender === "unisex" || itemGender === "unisex-adults";
+          }
+          if (selectedGender === "unisex-adults") {
+            return itemGender === "unisex-adults";
+          }
+          if (selectedGender === "unisex-kids") {
+            return itemGender === "unisex-kids";
+          }
+          return itemGender === selectedGender;
+        });
+      });
+    }
+
+    // Price filter
+    filtered = filtered.filter((item) => {
+      const price = parsePrice(item.offerPrice || item.price);
+      return price >= filters.priceRange[0] && price <= filters.priceRange[1];
+    });
+
+    // Color filter - check if product name contains color keywords
+    if (filters.colors.length > 0) {
+      filtered = filtered.filter((item) => {
+        const itemName = item.name?.toLowerCase() || "";
+        return filters.colors.some((color) => {
+          const colorMap = {
+            black: ["black", "navy"],
+            white: ["white"],
+            gray: ["gray", "grey"],
+            blue: ["blue"],
+            red: ["red"],
+            green: ["green"],
+            yellow: ["yellow"],
+            orange: ["orange"],
+            purple: ["purple"],
+            brown: ["brown", "tan"],
+            pink: ["pink"],
+            "multi-colored": ["multi"],
+          };
+          const keywords = colorMap[color] || [color];
+          return keywords.some((keyword) => itemName.includes(keyword));
+        });
+      });
+    }
+
+    // Discount filter
+    if (filters.discount.length > 0) {
+      filtered = filtered.filter((item) => {
+        if (!item.offerPrice) return false;
+        const basePrice = parsePrice(item.price);
+        const offerPrice = parsePrice(item.offerPrice);
+        const discountPercent = ((basePrice - offerPrice) / basePrice) * 100;
+        
+        return filters.discount.some((discountFilter) => {
+          if (discountFilter === "15") {
+            return discountPercent >= 15 && discountPercent < 20;
+          } else if (discountFilter === "less-than-20") {
+            return discountPercent < 20;
+          } else if (discountFilter === "20-29") {
+            return discountPercent >= 20 && discountPercent < 30;
+          } else if (discountFilter === "30-39") {
+            return discountPercent >= 30 && discountPercent < 40;
+          }
+          return false;
+        });
+      });
+    }
+
+    // Sort
+    if (sortOption) {
+      filtered.sort((a, b) => {
+        const priceA = parsePrice(a.offerPrice || a.price);
+        const priceB = parsePrice(b.offerPrice || b.price);
+        
+        switch (sortOption) {
+          case "price-low-high":
+            return priceA - priceB;
+          case "price-high-low":
+            return priceB - priceA;
+          case "discount-high-low":
+            const discountA = a.offerPrice ? parsePrice(a.price) - priceA : 0;
+            const discountB = b.offerPrice ? parsePrice(b.price) - priceB : 0;
+            return discountB - discountA;
+          default:
+            return 0;
+        }
+      });
+    }
+
+    return filtered;
+  }, [searchQuery, filters, sortOption]);
+
+  // Handle search input
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    debouncedSearch(value);
+  };
+
+  // Handle sort change
+  const handleSortChange = (e) => {
+    const value = e.target.value;
+    setSortOption(value);
+    updateURL({ sortOption: value });
+  };
+
+  // Format category name for display
+  const getCategoryDisplayName = (category) => {
+    if (!category) return "ALL PRODUCTS";
+    
+    const categoryMap = {
+      men: "MEN",
+      women: "WOMEN",
+      kids: "KIDS",
+      sports: "SPORTS",
+      motorsports: "MOTORSPORTS",
+      collaborations: "COLLABORATIONS",
+      outlet: "OUTLET",
+      new: "NEW ARRIVALS",
+      all: "ALL PRODUCTS"
+    };
+    
+    const normalizedCategory = category.toLowerCase();
+    return categoryMap[normalizedCategory] || category.toUpperCase();
+  };
+
+  const categoryDisplayName = getCategoryDisplayName(params.category);
+
+  // Get products to display (for infinite scroll)
+  const displayedProducts = useMemo(() => {
+    return filteredProducts.slice(0, displayCount);
+  }, [filteredProducts, displayCount]);
+
+  // Reset display count when filters change
+  useEffect(() => {
+    setDisplayCount(20);
+  }, [searchQuery, filters, sortOption]);
+
+  // Infinite scroll handler
+  useEffect(() => {
+    const handleScroll = () => {
+      // Check if user has scrolled near the bottom
+      if (
+        window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 500 &&
+        !isLoadingMore &&
+        displayedProducts.length < filteredProducts.length
+      ) {
+        setIsLoadingMore(true);
+        // Simulate loading delay for better UX
+        setTimeout(() => {
+          setDisplayCount((prev) => Math.min(prev + 20, filteredProducts.length));
+          setIsLoadingMore(false);
+        }, 300);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [isLoadingMore, displayedProducts.length, filteredProducts.length]);
+
   return (
     <div className="w-full flex flex-col md:px-10 px-3 py-8 gap-5 relative">
       <div className="flex items-center md:gap-5 gap-0 text-sm">
-        <Link href="/" className="block md:hidden text-center">
+        <Link href="/" className="block md:hidden text-center cursor-pointer">
           <MdKeyboardArrowLeft size={30} />
         </Link>
-        <Link href="/">
+        <Link href="/" className="cursor-pointer">
         <ul>
           <li className="text-[18px] font-bold">Home</li>
         </ul>
@@ -42,12 +564,24 @@ const Page = () => {
         
         <span className="text-gray-400 text-[20px] hidden md:block">•</span>
         <ol className="hidden md:block">
-          <li className="text-[17px]">{params.category}</li>
+          <li className="text-[17px]">{categoryDisplayName}</li>
         </ol>
       </div>
 
       <div className="w-full">
-        <div className="text-[35px] font-bold">MEN</div>
+        <div className="text-[35px] font-bold">{categoryDisplayName}</div>
+      </div>
+
+      {/* Search Bar */}
+      <div className="w-full">
+        <input
+          type="text"
+          placeholder="Search products..."
+          value={searchQuery}
+          onChange={handleSearchChange}
+          className="w-full border border-gray-300 px-4 py-3 text-[16px] rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
+          aria-label="Search products"
+        />
       </div>
 
       <div className="relative">
@@ -80,11 +614,17 @@ const Page = () => {
                 <div className="border-b absolute left-[-20px] right-[-20px] top-0 text-[#B2B2B2]"></div>
               </div>
               <div className="w-full">
-                <FilterAccordian />
+                <FilterAccordian 
+                  filters={filters}
+                  onFiltersChange={handleFiltersChange}
+                  filterCounts={filterCounts}
+                />
               </div>
               <div>
-                <button className="w-full h-15 bg-black text-white text-[20px] cursor-pointer hover:bg-[#FFDFB7] font-bold">
-                  SHOW 4118 PRODUCTS
+                <button 
+                  onClick={toggleDrawer(false)}
+                  className="w-full h-15 bg-black text-white text-[20px] cursor-pointer hover:bg-gray-800 transition-colors font-bold py-3 rounded">
+                  SHOW {filteredProducts.length} {filteredProducts.length === 1 ? "PRODUCT" : "PRODUCTS"}
                 </button>
               </div>
             </div>
@@ -97,8 +637,9 @@ const Page = () => {
         <div className="relative border inline-block">
           <select
             value={sortOption}
-            onChange={(e) => setSortOption(e.target.value)}
-            className="px-2 py-2 border border-[#B2B2B2] hover:border-black text-[16px] font-bold cursor-pointer appearance-none w-auto min-w-[200px]"
+            onChange={handleSortChange}
+            className="px-2 py-2 border border-[#B2B2B2] hover:border-black text-[16px] font-bold cursor-pointer appearance-none w-auto min-w-[200px] bg-white"
+            aria-label="Sort products"
           >
             <option value="" disabled>
               SORT BY
@@ -118,21 +659,79 @@ const Page = () => {
         <div className="border-b absolute md:left-[-40px] left-[-8px] md:right-[-40px] right-[-8px] top-0 text-[#B2B2B2]"></div>
       </div>
 
-      <div className="w-full flex justify-between">
-        <div className="text-[16px] font-bold">{"4128 Products".toUpperCase()}</div>
+      <div className="w-full flex justify-between items-center">
+        <div className="text-[18px] md:text-[20px] font-bold text-gray-900">
+          {filteredProducts.length === 0 ? (
+            <span className="text-gray-500">No Products Found</span>
+          ) : (
+            <span>
+              {filteredProducts.length} {filteredProducts.length === 1 ? "Product" : "Products"}
+            </span>
+          )}
+        </div>
         <div className="flex gap-3 items-center">
-          <div>
+          <div className="cursor-pointer hover:opacity-70 transition-opacity">
             <BiGridAlt className="text-[25px]" />
           </div>
-          <div>
+          <div className="cursor-pointer hover:opacity-70 transition-opacity">
             <TfiLayoutGrid4Alt className="text-[22px]" />
           </div>
         </div>
       </div>
 
-      <div>
-        <Cards />
-      </div>
+      {filteredProducts.length === 0 ? (
+        <div className="w-full flex flex-col items-center justify-center py-20 px-4">
+          <div className="max-w-md text-center">
+            <div className="text-6xl mb-4">🔍</div>
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
+              No Products Found
+            </h2>
+            <p className="text-gray-600 mb-6 text-lg">
+              {searchQuery
+                ? `We couldn't find any products matching "${searchQuery}". Try adjusting your search or filters.`
+                : "We couldn't find any products matching your criteria. Try adjusting your filters or browse other categories."}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                    setFilters({
+                      categories: [],
+                      sizes: [],
+                      colors: [],
+                      priceRange: [0, 45999],
+                      discount: [],
+                    });
+                    router.push(`/products/${params.category}`);
+                  }}
+                  className="px-6 py-3 bg-black text-white font-bold rounded hover:bg-gray-800 transition-colors cursor-pointer">
+                  Clear Search
+                </button>
+              )}
+              <Link
+                href="/products/all"
+                className="px-6 py-3 border-2 border-black text-black font-bold rounded hover:bg-gray-100 transition-colors cursor-pointer text-center">
+                Browse All Products
+              </Link>
+            </div>
+          </div>
+        </div>
+            ) : (
+              <div>
+                <Cards filteredProducts={displayedProducts} />
+                {isLoadingMore && (
+                  <div className="flex justify-center items-center py-8">
+                    <div className="text-gray-500 text-lg">Loading more products...</div>
+                  </div>
+                )}
+                {displayedProducts.length >= filteredProducts.length && filteredProducts.length > 20 && (
+                  <div className="flex justify-center items-center py-8">
+                    <div className="text-gray-500 text-lg">You've reached the end</div>
+                  </div>
+                )}
+              </div>
+            )}
       <div>
         <Desription/>
       </div>

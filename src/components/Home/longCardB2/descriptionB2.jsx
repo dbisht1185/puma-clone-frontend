@@ -1,9 +1,10 @@
-
+import Link from "next/link";
 
 const DescriptionB2 = () => {
   return (
-    <div 
-    className="w-full h-auto flex flex-col gap-5 justify-center px-5 items-center" 
+    <Link 
+    href="/products/footwear"
+    className="w-full h-auto flex flex-col gap-5 justify-center px-5 items-center cursor-pointer" 
   >
   <div className="flex flex-col items-center w-full">
       <h1 className=" text-[20px] font-bold text-black">WELCOME TO DREAMLAND</h1>
@@ -13,7 +14,7 @@ const DescriptionB2 = () => {
   <div>
       <button className="px-3 py-2 font-semibold rounded-[2px] cursor-pointer ">SHOP NOW</button>
   </div>
-  </div>
+  </Link>
   )
 }
 

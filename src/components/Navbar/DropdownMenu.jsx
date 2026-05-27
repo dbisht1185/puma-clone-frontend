@@ -1,10 +1,26 @@
 import React from "react";
+import Link from "next/link";
 import { menuDats } from "@/constant/Navbar/MenuData";
 
 const DropdownMenu = ({ show, setShow }) => {
   if (!show || !menuDats[show]) return null;
 
   const { sections } = menuDats[show];
+
+  // Generate URL-friendly slug from link text
+  const generateSlug = (linkText) => {
+    return linkText
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  };
+
+  // Generate href based on menu item and link
+  const getLinkHref = (linkText) => {
+    const slug = generateSlug(linkText);
+    const basePath = `/products/${show.toLowerCase()}`;
+    return `${basePath}?category=${slug}`;
+  };
 
   return (
     <div
@@ -22,8 +38,13 @@ const DropdownMenu = ({ show, setShow }) => {
             )}
             <ul className="space-y-1">
               {section.links.map((link, linkIndex) => (
-                <li key={linkIndex} className="text-gray-600 hover:text-black cursor-pointer">
-                  {link}
+                <li key={linkIndex}>
+                  <Link
+                    href={getLinkHref(link)}
+                    onClick={() => setShow(null)}
+                    className="text-gray-600 hover:text-black cursor-pointer transition-colors block">
+                    {link}
+                  </Link>
                 </li>
               ))}
             </ul>

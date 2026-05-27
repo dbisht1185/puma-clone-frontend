@@ -9,7 +9,7 @@ const HeroSection = () => {
       <div className="grid grid-cols-3 gap-5 w-full max-w-[1400px]">
         {heroSectionDatas.map((item, index) => (
           <div key={index} className="relative">
-            <Link href={item.href}>
+            <Link href={item.href} className="cursor-pointer">
               <Image
                 src={item.img}
                 alt="Puma Product Image"
@@ -19,11 +19,11 @@ const HeroSection = () => {
               />
             </Link>
             <div className="absolute left-0 bottom-0 w-full bg-gradient-to-t from-black/60 via-black/20 to-transparent h-[40%]"></div>
-            <div className="absolute bottom-[10px] left-1/2 transform -translate-x-1/2 p-2">
-              <span className="inline-block align-top no-underline min-w-[100px]  md:min-w-[120px] lg:min-w-[90px] text-white text-[16px] sm:text-[18px] md:text-[20px] lg:text-[24px] font-semibold tracking-wide text-center">
+            <Link href={item.href} className="absolute bottom-[10px] left-1/2 transform -translate-x-1/2 p-2 cursor-pointer">
+              <span className="inline-block align-top no-underline min-w-[100px]  md:min-w-[120px] lg:min-w-[90px] text-white text-[16px] sm:text-[18px] md:text-[20px] lg:text-[24px] font-semibold tracking-wide text-center hover:text-gray-200 transition-colors">
                 {item.name}
               </span>
-            </div>
+            </Link>
           </div>
         ))}
       </div>

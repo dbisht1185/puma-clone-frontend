@@ -1,9 +1,11 @@
 import DescriptionB2 from "@/components/Home/longCardB2/descriptionB2";
+import Link from "next/link";
 
 const Block2 = () => {
   return (
     <>
-      <div
+      <Link
+        href="/products/footwear"
         className="
          w-full min-h-[500px] sm:h-[550px]
           bg-no-repeat
@@ -27,7 +29,7 @@ const Block2 = () => {
             SHOP NOW
           </button>
         </div>
-      </div>
+      </Link>
 
       <div className="block sm:hidden w-full">
         <DescriptionB2 />
