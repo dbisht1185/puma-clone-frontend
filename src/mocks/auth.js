@@ -1,87 +1,132 @@
-import axios from "axios";
+import apiClient from "./apiClient";
 
 class AuthApi {
   async register(data) {
     try {
-      const res = await axios.post(
-        `${process.env.NEXT_PUBLIC_HOST}/auth/register`,
-        data
-      );
+      const res = await apiClient.post("/auth/register", data);
       console.log("Register Api Response", res);
       return res;
     } catch (error) {
-      console.log(error);
-      return error.response;
+      console.error(error);
+      return error;
     }
   }
 
   async login(data) {
-    // console.log("Mocks Data :", data);
     try {
-      const res = await axios.post(
-        `${process.env.NEXT_PUBLIC_HOST}/auth/login`,
-        data
-      );
+      const res = await apiClient.post("/auth/login", data);
       console.log("Login Api Response", res);
-      if (typeof window !== "undefined") {
-        localStorage.setItem("access Token", res?.data?.data?.token);
-        localStorage.setItem("userId", res?.data?.data?.id);
+      
+      if (res?.data?.status === "SUCCESS") {
+        if (typeof window !== "undefined") {
+          localStorage.setItem("access Token", res?.data?.data?.token);
+          localStorage.setItem("userId", res?.data?.data?.id);
+        }
       }
       return res;
-      // console.log("Acess Token",res?.data?.data?.token)
-      // console.log("Acess ID",res?.data?.data?.id)
     } catch (error) {
-      return error.response;
+      console.error(error);
+      return error;
     }
   }
 
   async forgetPassword(data) {
     try {
-      const res = await axios.post(
-        `${process.env.NEXT_PUBLIC_HOST}/auth/reset-password-otp`,
-        data
-      );
-      // console.log("Forget Password Api Response", res);
+      const res = await apiClient.post("/auth/reset-password-otp", data);
       return res;
     } catch (error) {
-      console.log(error);
-      return error.response;
+      console.error(error);
+      return error;
     }
   }
 
   async resetPassword(data) {
-    // console.log("Mocks data", data);
     try {
-      const res = await axios.put(
-        `${process.env.NEXT_PUBLIC_HOST}/auth/reset-password`,
-        data
-      );
-      // console.log("Reset Password Api Response", res);
+      const res = await apiClient.put("/auth/reset-password", data);
       return res;
     } catch (error) {
-      console.log(error);
-      return error.response;
+      console.error(error);
+      return error;
     }
   }
 
   async logout(data) {
-    // console.log("Logout Mocks data", data);
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("access Token") : null;
-      const res = await axios.post(
-        `${process.env.NEXT_PUBLIC_HOST}/auth/logout`,
-        data,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      // console.log("Logout Api Response", res);
+      const res = await apiClient.post("/auth/logout", data);
       return res;
     } catch (error) {
-      console.log(error);
-      return error.response;
+      console.error(error);
+      return error;
+    }
+  }
+
+  async getMe() {
+    try {
+      const res = await apiClient.get("/auth/me");
+      return res;
+    } catch (error) {
+      console.error(error);
+      return error;
+    }
+  }
+
+  async updateProfile(data) {
+    try {
+      const res = await apiClient.put("/auth/profile", data);
+      return res;
+    } catch (error) {
+      console.error(error);
+      return error;
+    }
+  }
+
+  async changePassword(data) {
+    try {
+      const res = await apiClient.put("/auth/change-password", data);
+      return res;
+    } catch (error) {
+      console.error(error);
+      return error;
+    }
+  }
+
+  // Admin only - Get all users
+  async getAllUsers(params = {}) {
+    try {
+      return await apiClient.get("/auth/users", { params });
+    } catch (error) {
+      console.error(error);
+      return error;
+    }
+  }
+
+  // Admin only - Update user status ('active', 'on-hold', 'blocked')
+  async updateUserStatus(id, status) {
+    try {
+      return await apiClient.put(`/auth/users/${id}/status`, { status });
+    } catch (error) {
+      console.error(error);
+      return error;
+    }
+  }
+
+  // Admin only - Update user role ('user', 'admin')
+  async updateUserRole(id, role) {
+    try {
+      return await apiClient.put(`/auth/users/${id}/role`, { role });
+    } catch (error) {
+      console.error(error);
+      return error;
+    }
+  }
+
+  // Admin only - Delete / terminate user account
+  async deleteUser(id) {
+    try {
+      return await apiClient.delete(`/auth/users/${id}`);
+    } catch (error) {
+      console.error(error);
+      return error;
     }
   }
 }

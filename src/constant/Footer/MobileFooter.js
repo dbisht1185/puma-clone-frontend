@@ -52,6 +52,7 @@ export const MobileAccordionDatas = [
     items: [
       { name: "APP", icon: <SiPuma className="w-8 h-8" />, href: "/app" },  
       { name: "TRAC", icon: <SiPuma className="w-8 h-8" />, href: "/trac" },  
+      { name: "Admin", icon: <SiPuma className="w-8 h-8" />, href: "/admin/dashboard" },  
     ],
   },
 ];

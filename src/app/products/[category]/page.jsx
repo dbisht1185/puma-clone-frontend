@@ -17,6 +17,8 @@ import { CardDatas } from "@/constant/Products/Cards";
 import { useMemo, useState, useCallback, useEffect } from "react";
 import { debounce } from "@/utils/debounce";
 import { parsePrice } from "@/utils/price";
+import { productsApi } from "@/mocks/products";
+import { useQuery } from "@tanstack/react-query";
 
 const Page = () => {
   const params = useParams();
@@ -34,8 +36,77 @@ const Page = () => {
     discount: searchParams.get("discount")?.split(",").filter(Boolean) || [],
     gender: searchParams.get("gender")?.split(",").filter(Boolean) || [],
   });
+  const [currentPage, setCurrentPage] = useState(1);
   const [displayCount, setDisplayCount] = useState(20);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  const getApiParamsFromRoute = (categoryParam) => {
+    if (!categoryParam || categoryParam === 'all') return {};
+    const cat = categoryParam.toLowerCase();
+    
+    // Map route params to correct API filters
+    if (['men', 'women', 'kids'].includes(cat)) {
+      return { gender: cat };
+    } else if (['footwear', 'apparel', 'accessories', 'sports'].includes(cat)) {
+      return { category: cat };
+    } else if (cat === 'collaborations') {
+      return { collaboration: 'true' };
+    } else if (cat === 'new') {
+      return { sort: 'newest' };
+    }
+    return { category: cat }; // fallback
+  };
+
+  // Base query for category/search to compute facet counts
+  const { data: categoryProducts = [], isLoading: dbLoading } = useQuery({
+    queryKey: ["products", params.category, searchQuery],
+    queryFn: async () => {
+      const routeParams = getApiParamsFromRoute(params.category);
+      const res = await productsApi.getProducts({
+        ...routeParams,
+        search: searchQuery || undefined,
+      });
+      return res.data?.status === "SUCCESS" ? res.data.data : [];
+    },
+    initialData: [],
+  });
+
+  // Dynamic query that sends all filters to the backend
+  const { data: filteredProducts = [], isLoading: isProductsLoading } = useQuery({
+    queryKey: ["filteredProducts", params.category, searchQuery, filters, sortOption],
+    queryFn: async () => {
+      const routeParams = getApiParamsFromRoute(params.category);
+      
+      const apiParams = {
+        ...routeParams,
+        search: searchQuery || undefined,
+        sort: sortOption || undefined,
+        colors: filters.colors.length > 0 ? filters.colors.join(',') : undefined,
+        sizes: filters.sizes.length > 0 ? filters.sizes.join(',') : undefined,
+        discount: filters.discount.length > 0 ? filters.discount.join(',') : undefined,
+      };
+
+      // If explicit gender filters are selected, they override the route param
+      if (filters.gender.length > 0) {
+        apiParams.gender = filters.gender.join(',');
+      }
+      
+      // If explicit category filters are selected, they override the route param
+      if (filters.categories && filters.categories.length > 0) {
+        apiParams.category = filters.categories.join(',');
+      }
+
+      if (filters.priceRange[0] > 0 || filters.priceRange[1] < 45999) {
+        apiParams.minPrice = filters.priceRange[0];
+        apiParams.maxPrice = filters.priceRange[1];
+      }
+
+      const res = await productsApi.getProducts(apiParams);
+      return res.data?.status === "SUCCESS" ? res.data.data : [];
+    },
+  });
+
+
 
   const toggleDrawer = (newOpen) => () => {
     setOpen(newOpen);
@@ -118,16 +189,8 @@ const Page = () => {
 
   // Calculate all filter counts based on current filtered products (before applying that specific filter)
   const filterCounts = useMemo(() => {
-    // Start with products filtered by search and price
-    let baseFiltered = [...CardDatas];
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      baseFiltered = baseFiltered.filter(
-        (item) =>
-          item.name?.toLowerCase().includes(query) ||
-          item.description?.toLowerCase().includes(query)
-      );
-    }
+    // Start with products filtered by search and category (already done by the categoryProducts query)
+    let baseFiltered = [...categoryProducts];
 
     // Apply price filter (if not default)
     if (filters.priceRange[0] > 0 || filters.priceRange[1] < 45999) {
@@ -360,127 +423,7 @@ const Page = () => {
       category: categoryCounts,
       size: sizeCounts,
     };
-  }, [searchQuery, filters.priceRange, filters.colors, filters.discount, filters.gender]);
-
-  // Filter and sort products
-  const filteredProducts = useMemo(() => {
-    let filtered = [...CardDatas];
-
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (item) =>
-          item.name?.toLowerCase().includes(query) ||
-          item.description?.toLowerCase().includes(query)
-      );
-    }
-
-    // Gender filter
-    if (filters.gender.length > 0) {
-      filtered = filtered.filter((item) => {
-        const itemGender = item.gender || "unisex";
-        return filters.gender.some((selectedGender) => {
-          if (selectedGender === "boys") {
-            return itemGender === "boys" || itemGender === "unisex-kids";
-          }
-          if (selectedGender === "female") {
-            return itemGender === "female" || itemGender === "women";
-          }
-          if (selectedGender === "male") {
-            return itemGender === "male" || itemGender === "men";
-          }
-          if (selectedGender === "unisex") {
-            return itemGender === "unisex" || itemGender === "unisex-adults";
-          }
-          if (selectedGender === "unisex-adults") {
-            return itemGender === "unisex-adults";
-          }
-          if (selectedGender === "unisex-kids") {
-            return itemGender === "unisex-kids";
-          }
-          return itemGender === selectedGender;
-        });
-      });
-    }
-
-    // Price filter
-    filtered = filtered.filter((item) => {
-      const price = parsePrice(item.offerPrice || item.price);
-      return price >= filters.priceRange[0] && price <= filters.priceRange[1];
-    });
-
-    // Color filter - check if product name contains color keywords
-    if (filters.colors.length > 0) {
-      filtered = filtered.filter((item) => {
-        const itemName = item.name?.toLowerCase() || "";
-        return filters.colors.some((color) => {
-          const colorMap = {
-            black: ["black", "navy"],
-            white: ["white"],
-            gray: ["gray", "grey"],
-            blue: ["blue"],
-            red: ["red"],
-            green: ["green"],
-            yellow: ["yellow"],
-            orange: ["orange"],
-            purple: ["purple"],
-            brown: ["brown", "tan"],
-            pink: ["pink"],
-            "multi-colored": ["multi"],
-          };
-          const keywords = colorMap[color] || [color];
-          return keywords.some((keyword) => itemName.includes(keyword));
-        });
-      });
-    }
-
-    // Discount filter
-    if (filters.discount.length > 0) {
-      filtered = filtered.filter((item) => {
-        if (!item.offerPrice) return false;
-        const basePrice = parsePrice(item.price);
-        const offerPrice = parsePrice(item.offerPrice);
-        const discountPercent = ((basePrice - offerPrice) / basePrice) * 100;
-        
-        return filters.discount.some((discountFilter) => {
-          if (discountFilter === "15") {
-            return discountPercent >= 15 && discountPercent < 20;
-          } else if (discountFilter === "less-than-20") {
-            return discountPercent < 20;
-          } else if (discountFilter === "20-29") {
-            return discountPercent >= 20 && discountPercent < 30;
-          } else if (discountFilter === "30-39") {
-            return discountPercent >= 30 && discountPercent < 40;
-          }
-          return false;
-        });
-      });
-    }
-
-    // Sort
-    if (sortOption) {
-      filtered.sort((a, b) => {
-        const priceA = parsePrice(a.offerPrice || a.price);
-        const priceB = parsePrice(b.offerPrice || b.price);
-        
-        switch (sortOption) {
-          case "price-low-high":
-            return priceA - priceB;
-          case "price-high-low":
-            return priceB - priceA;
-          case "discount-high-low":
-            const discountA = a.offerPrice ? parsePrice(a.price) - priceA : 0;
-            const discountB = b.offerPrice ? parsePrice(b.price) - priceB : 0;
-            return discountB - discountA;
-          default:
-            return 0;
-        }
-      });
-    }
-
-    return filtered;
-  }, [searchQuery, filters, sortOption]);
+  }, [filters.priceRange, filters.colors, filters.discount, filters.gender, categoryProducts]);
 
   // Handle search input
   const handleSearchChange = (e) => {

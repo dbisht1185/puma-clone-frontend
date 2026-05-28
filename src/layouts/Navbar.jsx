@@ -282,7 +282,6 @@ const Navbar = () => {
             disableFocusListener
             disableHoverListener
             disableTouchListener
-            interactive
             componentsProps={{
               tooltip: {
                 style: {

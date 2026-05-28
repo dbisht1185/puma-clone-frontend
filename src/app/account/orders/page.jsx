@@ -7,16 +7,18 @@ import React, { useState, useEffect, useMemo } from "react";
 import { IoIosArrowDown } from "react-icons/io";
 import { FaTruck, FaCheckCircle, FaTimesCircle, FaUndo, FaBoxOpen, FaBox, FaShippingFast } from "react-icons/fa";
 import Image from "next/image";
-import { getOrdersFromStorage, filterOrdersByPeriod, updateOrderStatus, simulateOrderProgression } from "@/utils/orderStorage";
+import { filterOrdersByPeriod } from "@/utils/orderStorage";
 import { formatPrice } from "@/utils/price";
 import { useToast } from "@/context/toaster";
 import ConfirmationModal from "@/components/common/ConfirmationModal";
+import { ordersApi } from "@/mocks/orders";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 const Page = () => {
     const router = useRouter();
     const path = usePathname();
   const { setAlert } = useToast();
-  const [orders, setOrders] = useState([]);
+  const queryClient = useQueryClient();
   const [selectedPeriod, setSelectedPeriod] = useState("all");
   const [expandedOrder, setExpandedOrder] = useState(null);
   const [showTracking, setShowTracking] = useState({});
@@ -24,21 +26,93 @@ const Page = () => {
   const [showReturnModal, setShowReturnModal] = useState(null);
   const [showCancelConfirm, setShowCancelConfirm] = useState(null);
 
+  const [isDark, setIsDark] = useState(false);
+
   useEffect(() => {
-    // Simulate order progression (auto-update order statuses)
-    simulateOrderProgression();
-    const storedOrders = getOrdersFromStorage();
-    setOrders(storedOrders);
-
-    // Refresh orders every minute to update tracking
-    const interval = setInterval(() => {
-      simulateOrderProgression();
-      const updatedOrders = getOrdersFromStorage();
-      setOrders(updatedOrders);
-    }, 60000); // Check every minute
-
+    const checkTheme = () => {
+      if (typeof window !== "undefined") {
+        const stored = localStorage.getItem("shopTheme") || "light";
+        setIsDark(stored === "dark");
+      }
+    };
+    checkTheme();
+    const interval = setInterval(checkTheme, 300);
     return () => clearInterval(interval);
   }, []);
+
+  const getStatusBadgeStyles = (status) => {
+    if (isDark) {
+      switch (status) {
+        case "delivered":
+          return "text-green-400 bg-green-950/20 border-green-900/30";
+        case "shipped":
+          return "text-blue-400 bg-blue-950/20 border-blue-900/30";
+        case "cancelled":
+          return "text-red-400 bg-red-950/20 border-red-900/30";
+        case "returned":
+          return "text-orange-400 bg-orange-950/20 border-orange-900/30";
+        case "return_initiated":
+          return "text-yellow-400 bg-yellow-950/20 border-yellow-900/30";
+        default:
+          return "text-gray-400 bg-gray-900/20 border-gray-800/30";
+      }
+    } else {
+      switch (status) {
+        case "delivered":
+          return "text-green-600 bg-green-50 border-green-200";
+        case "shipped":
+          return "text-blue-600 bg-blue-50 border-blue-200";
+        case "cancelled":
+          return "text-red-600 bg-red-50 border-red-200";
+        case "returned":
+          return "text-orange-600 bg-orange-50 border-orange-200";
+        case "return_initiated":
+          return "text-yellow-600 bg-yellow-50 border-yellow-200";
+        default:
+          return "text-gray-600 bg-gray-50 border-gray-200";
+      }
+    }
+  };
+
+  const { data: dbOrders = [], isLoading } = useQuery({
+    queryKey: ["myOrders"],
+    queryFn: async () => {
+      const res = await ordersApi.getMyOrders();
+      return res.data?.status === "SUCCESS" ? res.data.data : [];
+    }
+  });
+
+  const orders = useMemo(() => {
+    return dbOrders.map(order => ({
+      orderId: order._id,
+      orderDate: order.createdAt,
+      orderTotal: order.totalAmount,
+      subtotal: order.totalAmount,
+      totalDiscount: 0,
+      shippingCharges: 0,
+      status: order.status ? order.status.toLowerCase() : "pending",
+      estimatedDelivery: new Date(new Date(order.createdAt).getTime() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+      items: order.items.map(item => ({
+        name: item.name,
+        image: item.img || "/Images/Products/cards/Easy-Rider-Leather-Unisex-Sneakers2.jpeg",
+        size: item.size || "One Size",
+        quantity: item.quantity || 1,
+        unitPrice: item.price || 0,
+        basePrice: item.price || 0,
+        discountAmount: 0
+      })),
+      shippingAddress: {
+        firstName: order.shippingAddress?.fullName?.split(" ")[0] || "Customer",
+        lastName: order.shippingAddress?.fullName?.split(" ").slice(1).join(" ") || "",
+        addressLine1: order.shippingAddress?.addressLine || "",
+        addressLine2: "",
+        city: order.shippingAddress?.city || "",
+        state: order.shippingAddress?.state || "",
+        pinCode: order.shippingAddress?.postalCode || "",
+        country: order.shippingAddress?.country || "India"
+      }
+    }));
+  }, [dbOrders]);
 
   const filteredOrders = useMemo(() => {
     if (selectedPeriod === "all") return orders;
@@ -264,30 +338,51 @@ const Page = () => {
     setShowCancelConfirm(orderId);
   };
 
-  const confirmCancelOrder = (orderId) => {
-    updateOrderStatus(orderId, "cancelled", {
-      cancelledAt: new Date().toISOString(),
-    });
-
-    setOrders(getOrdersFromStorage());
-
-    setAlert({
-      open: true,
-      message: "Order cancelled successfully",
-      severity: "success",
-    });
+  const confirmCancelOrder = async (orderId) => {
+    try {
+      const res = await ordersApi.cancelOrder(orderId);
+      if (res.data?.status === "SUCCESS") {
+        queryClient.invalidateQueries({ queryKey: ["myOrders"] });
+        setAlert({
+          open: true,
+          message: "Order cancelled successfully",
+          severity: "success",
+        });
+      } else {
+        setAlert({
+          open: true,
+          message: res.data?.message || "Failed to cancel order",
+          severity: "error",
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      setAlert({
+        open: true,
+        message: "Failed to cancel order",
+        severity: "error",
+      });
+    }
   };
 
   return (
-    <div className="w-full min-h-screen bg-gray-50">
+    <div className={`w-full min-h-screen transition-colors duration-300 ${isDark ? "bg-[#0c0c0e] text-white" : "bg-gray-50 text-black"}`}>
       <div className="lg:w-[90%] w-[95%] m-auto flex flex-col my-10 gap-5">
         {/* Breadcrumb */}
-      <div className="w-full text-black">
+      <div className={`w-full ${isDark ? "text-gray-300" : "text-black"}`}>
           <Link href="/" className="font-bold cursor-pointer">
             Home
           </Link>
       <span className="mx-1 text-gray-500"> • </span>
-          <Link href="/account" className="font-bold cursor-pointer">
+          <Link
+            href="/account"
+            onClick={() => {
+              if (path !== "/account" && typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("route-change-start"));
+              }
+            }}
+            className="font-bold cursor-pointer"
+          >
             My account
           </Link>
       <span className="mx-1 text-gray-500"> • </span>
@@ -297,19 +392,25 @@ const Page = () => {
         {/* Header */}
         <div className="flex flex-col gap-2 pb-5">
           <div className="text-2xl font-bold">My Orders</div>
-          <div className="text-sm text-gray-600">
+          <div className={`text-sm ${isDark ? "text-gray-400" : "text-gray-600"}`}>
             View and manage all your orders
           </div>
         </div>
 
         {/* Filter */}
-        <div className="flex flex-col gap-1 bg-white p-4 rounded-lg shadow-sm">
-          <div className="text-[12px] font-bold text-gray-700">SELECT DATE</div>
+        <div className={`flex flex-col gap-1 p-4 rounded-lg shadow-sm border ${
+          isDark ? "bg-[#121215] border-[#1f1f24]" : "bg-white border-gray-100"
+        }`}>
+          <div className={`text-[12px] font-bold ${isDark ? "text-gray-300" : "text-gray-700"}`}>SELECT DATE</div>
           <div className="relative">
             <select
               value={selectedPeriod}
               onChange={(e) => setSelectedPeriod(e.target.value)}
-              className="border p-4 w-full appearance-none bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-400 rounded">
+              className={`border p-4 w-full appearance-none cursor-pointer focus:outline-none focus:ring-2 rounded ${
+                isDark 
+                  ? "bg-[#18181b] border-[#27272a] text-white focus:ring-gray-700" 
+                  : "bg-white border-gray-300 text-black focus:ring-gray-400"
+              }`}>
               <option value="all">All Orders</option>
               <option value="last-six-months">Last six months</option>
               <option value="last-twelve-months">Last twelve months</option>
@@ -326,17 +427,23 @@ const Page = () => {
 
         {/* Orders List */}
         {filteredOrders.length === 0 ? (
-          <div className="bg-white p-10 rounded-lg shadow-sm text-center">
+          <div className={`p-10 rounded-lg shadow-sm text-center border ${
+            isDark ? "bg-[#121215] border-[#1f1f24]" : "bg-white border-gray-100"
+          }`}>
             <div className="text-xl font-bold mb-2">No orders found</div>
-            <div className="text-gray-600 mb-5">
+            <div className={`mb-5 ${isDark ? "text-gray-400" : "text-gray-600"}`}>
               {selectedPeriod === "all"
                 ? "You haven't placed any orders yet."
                 : "No orders found for the selected time period."}
             </div>
             <Link
               href="/products/footwear"
-              className="inline-block px-6 py-3 bg-black text-white font-bold rounded hover:bg-gray-800 cursor-pointer transition-colors">
-              Start Shopping
+              className={`inline-block px-8 py-3.5 text-xs font-black uppercase tracking-[0.2em] transition-all duration-300 rounded-lg text-center cursor-pointer ${
+                isDark 
+                  ? "bg-white text-black hover:bg-red-600 hover:text-white shadow-[0_0_20px_rgba(255,255,255,0.08)]" 
+                  : "bg-black text-white hover:bg-red-600 hover:text-white"
+              }`}>
+              START SHOPPING
             </Link>
           </div>
         ) : (
@@ -344,265 +451,294 @@ const Page = () => {
             {filteredOrders.map((order) => (
               <div
                 key={order.orderId}
-                className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                className={`rounded-lg shadow-sm border overflow-hidden ${
+                  isDark ? "bg-[#121215] border-[#1f1f24]" : "bg-white border-gray-200"
+                }`}>
                 {/* Order Header */}
-                <div className="p-5 border-b border-gray-200">
+                <div className={`p-5 border-b ${isDark ? "border-[#1f1f24]" : "border-gray-200"}`}>
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-lg">Order #{order.orderId}</span>
                         <span
-                          className={`px-3 py-1 rounded-full text-xs font-semibold border flex items-center gap-1 ${getStatusColor(
-                            order.status
-                          )}`}>
+                          className={`px-3 py-1 rounded-full text-xs font-semibold border flex items-center gap-1 ${
+                            getStatusBadgeStyles(order.status)
+                          }`}>
                           {getStatusIcon(order.status)}
                           {order.status.toUpperCase().replace("_", " ")}
                         </span>
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        Placed on {formatDate(order.orderDate)}
-                      </div>
+                      </div>                    </div>
+                    <div className={`text-sm ${isDark ? "text-gray-400" : "text-gray-600"}`}>
+                      Placed on {formatDate(order.orderDate)}
                     </div>
-                    <div className="flex flex-col sm:text-right gap-1">
-                      <div className="font-bold text-lg">
-                        {formatPrice(order.orderTotal)}
-                      </div>
-                      {order.status !== "cancelled" && order.status !== "returned" && (
-                        <div className="text-sm text-gray-600">
-                          {order.status === "delivered" ? (
-                            <span className="text-green-600 font-semibold">
-                              Delivered on {formatDate(order.deliveredAt || order.estimatedDelivery)}
+                  </div>
+                  <div className="flex flex-col sm:text-right gap-1">
+                    <div className="font-bold text-lg">
+                      {formatPrice(order.orderTotal)}
+                    </div>
+                    {order.status !== "cancelled" && order.status !== "returned" && (
+                      <div className={`text-sm ${isDark ? "text-gray-400" : "text-gray-600"}`}>
+                        {order.status === "delivered" ? (
+                          <span className="text-green-600 font-semibold">
+                            Delivered on {formatDate(order.deliveredAt || order.estimatedDelivery)}
+                          </span>
+                        ) : (
+                          <span>
+                            Expected delivery:{" "}
+                            <span className="font-semibold text-blue-600">
+                              {formatDeliveryDate(order.estimatedDelivery)}
                             </span>
-                          ) : (
-                            <span>
-                              Expected delivery:{" "}
-                              <span className="font-semibold text-blue-600">
-                                {formatDeliveryDate(order.estimatedDelivery)}
-                              </span>
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+              {/* Order Items */}
+              <div className="p-5">
+                <div className="flex flex-col gap-4">
+                  {order.items.map((item, index) => (
+                    <div
+                      key={index}
+                      className={`flex gap-4 pb-4 border-b last:border-0 ${
+                        isDark ? "border-[#1f1f24]" : "border-gray-100"
+                      }`}>
+                      <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0">
+                        <Image
+                          src={item.image}
+                          alt={item.name}
+                          fill
+                          sizes="96px"
+                          className="object-contain rounded"
+                        />
+                      </div>
+                      <div className="flex-1 flex flex-col gap-1">
+                        <div className="font-semibold text-sm sm:text-base">
+                          {item.name}
+                        </div>
+                        <div className={`text-xs sm:text-sm ${isDark ? "text-gray-400" : "text-gray-600"}`}>
+                          Size: {item.size} | Qty: {item.quantity}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="font-bold text-sm sm:text-base">
+                            {formatPrice(item.unitPrice * item.quantity)}
+                          </span>
+                          {item.discountAmount > 0 && (
+                            <span className="text-xs text-gray-500 line-through">
+                              {formatPrice(item.basePrice * item.quantity)}
                             </span>
                           )}
                         </div>
-                      )}
+                      </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
 
-                {/* Order Items */}
-                <div className="p-5">
-                  <div className="flex flex-col gap-4">
-                    {order.items.map((item, index) => (
-                      <div
-                        key={index}
-                        className="flex gap-4 pb-4 border-b border-gray-100 last:border-0">
-                        <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0">
-                          <Image
-                            src={item.image}
-                            alt={item.name}
-                            fill
-                            sizes="96px"
-                            className="object-contain rounded"
-                          />
-                        </div>
-                        <div className="flex-1 flex flex-col gap-1">
-                          <div className="font-semibold text-sm sm:text-base">
-                            {item.name}
-                          </div>
-                          <div className="text-xs sm:text-sm text-gray-600">
-                            Size: {item.size} | Qty: {item.quantity}
-                          </div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="font-bold text-sm sm:text-base">
-                              {formatPrice(item.unitPrice * item.quantity)}
-                            </span>
-                            {item.discountAmount > 0 && (
-                              <span className="text-xs text-gray-500 line-through">
-                                {formatPrice(item.basePrice * item.quantity)}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Order Actions */}
-                  <div className="flex flex-wrap gap-3 mt-5 pt-5 border-t border-gray-200">
-                    {order.status === "ordered" && (
-                      <>
-                        <button
-                          onClick={() => handleCancelOrder(order.orderId)}
-                          className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 font-semibold text-sm cursor-pointer transition-colors">
-                          Cancel Order
-                        </button>
-                      </>
-                    )}
-                    {(order.status === "delivered" || order.status === "shipped") && (
+                {/* Order Actions */}
+                <div className={`flex flex-wrap gap-3 mt-5 pt-5 border-t ${isDark ? "border-[#1f1f24]" : "border-gray-200"}`}>
+                  {order.status === "ordered" && (
+                    <>
                       <button
-                        onClick={() => handleInitiateReturn(order.orderId)}
-                        className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 font-semibold text-sm cursor-pointer transition-colors">
-                        Initiate Return
+                        onClick={() => handleCancelOrder(order.orderId)}
+                        className={`px-4 py-2 border rounded font-semibold text-sm cursor-pointer transition-colors ${
+                          isDark 
+                            ? "bg-[#18181b] hover:bg-[#27272a] text-[#f4f4f5] border-[#27272a]" 
+                            : "border-gray-300 hover:bg-gray-50 text-black"
+                        }`}>
+                        Cancel Order
                       </button>
-                    )}
-                    {order.status === "return_initiated" && (
-                      <div className="px-4 py-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
-                        Return request submitted. Processing...
+                    </>
+                  )}
+                  {(order.status === "delivered" || order.status === "shipped") && (
+                    <button
+                      onClick={() => handleInitiateReturn(order.orderId)}
+                      className={`px-4 py-2 border rounded font-semibold text-sm cursor-pointer transition-colors ${
+                        isDark 
+                          ? "bg-[#18181b] hover:bg-[#27272a] text-[#f4f4f5] border-[#27272a]" 
+                          : "border-gray-300 hover:bg-gray-50 text-black"
+                      }`}>
+                      Initiate Return
+                    </button>
+                  )}
+                  {order.status === "return_initiated" && (
+                    <div className="px-4 py-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
+                      Return request submitted. Processing...
+                    </div>
+                  )}
+                  <button
+                    onClick={() =>
+                      setExpandedOrder(
+                        expandedOrder === order.orderId ? null : order.orderId
+                      )
+                    }
+                    className={`px-4 py-2 border rounded font-semibold text-sm cursor-pointer transition-colors ${
+                      isDark 
+                        ? "bg-[#18181b] hover:bg-[#27272a] text-[#f4f4f5] border-[#27272a]" 
+                        : "border-gray-300 hover:bg-gray-50 text-black"
+                    }`}>
+                    {expandedOrder === order.orderId
+                      ? "Hide Details"
+                      : "View Details"}
+                  </button>
+                </div>
+
+                {/* View Details - Shows directly below button */}
+                {expandedOrder === order.orderId && (
+                  <div className="mt-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      <div>
+                        <h3 className="font-bold mb-2">Shipping Address</h3>
+                        <div className={`text-sm ${isDark ? "text-gray-400" : "text-gray-600"}`}>
+                          {order.shippingAddress.firstName}{" "}
+                          {order.shippingAddress.lastName}
+                          <br />
+                          {order.shippingAddress.addressLine1}
+                          {order.shippingAddress.addressLine2 && (
+                            <>
+                              <br />
+                              {order.shippingAddress.addressLine2}
+                            </>
+                          )}
+                          <br />
+                          {order.shippingAddress.city}, {order.shippingAddress.state}
+                          <br />
+                          {order.shippingAddress.pinCode}
+                          <br />
+                          {order.shippingAddress.country}
+                        </div>
                       </div>
-                    )}
+                      <div>
+                        <h3 className="font-bold mb-2">Order Summary</h3>
+                        <div className="text-sm space-y-1">
+                          <div className="flex justify-between">
+                            <span className={`${isDark ? "text-gray-400" : "text-gray-600"}`}>Subtotal:</span>
+                            <span>{formatPrice(order.subtotal)}</span>
+                          </div>
+                          {order.totalDiscount > 0 && (
+                            <div className="flex justify-between text-green-600">
+                              <span>Discount:</span>
+                              <span>-{formatPrice(order.totalDiscount)}</span>
+                            </div>
+                          )}
+                          {order.shippingCharges > 0 && (
+                            <div className="flex justify-between">
+                              <span className={`${isDark ? "text-gray-400" : "text-gray-600"}`}>Shipping:</span>
+                              <span>{formatPrice(order.shippingCharges)}</span>
+                            </div>
+                          )}
+                          <div className={`flex justify-between font-bold pt-2 border-t ${isDark ? "border-[#1f1f24]" : ""}`}>
+                            <span>Total:</span>
+                            <span>{formatPrice(order.orderTotal)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Order Tracking Button - Only for active orders */}
+                {order.status !== "cancelled" && order.status !== "returned" && order.status !== "return_initiated" && (
+                  <div className={`mt-5 pt-5 border-t ${isDark ? "border-[#1f1f24]" : "border-gray-200"}`}>
                     <button
                       onClick={() =>
-                        setExpandedOrder(
-                          expandedOrder === order.orderId ? null : order.orderId
-                        )
+                        setShowTracking((prev) => ({
+                          ...prev,
+                          [order.orderId]: !prev[order.orderId],
+                        }))
                       }
-                      className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 font-semibold text-sm cursor-pointer transition-colors">
-                      {expandedOrder === order.orderId
-                        ? "Hide Details"
-                        : "View Details"}
+                      className={`flex items-center gap-2 px-4 py-2 border rounded font-semibold text-sm cursor-pointer transition-colors ${
+                        isDark 
+                          ? "bg-[#18181b] hover:bg-[#27272a] text-[#f4f4f5] border-[#27272a]" 
+                          : "border-gray-300 hover:bg-gray-50 text-black"
+                      }`}>
+                      <FaTruck className="text-blue-600" />
+                      {showTracking[order.orderId] ? "Hide Tracking" : "Track Order"}
                     </button>
-                  </div>
-
-                  {/* View Details - Shows directly below button */}
-                  {expandedOrder === order.orderId && (
-                    <div className="mt-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <div>
-                          <h3 className="font-bold mb-2">Shipping Address</h3>
-                          <div className="text-sm text-gray-600">
-                            {order.shippingAddress.firstName}{" "}
-                            {order.shippingAddress.lastName}
-                            <br />
-                            {order.shippingAddress.addressLine1}
-                            {order.shippingAddress.addressLine2 && (
-                              <>
-                                <br />
-                                {order.shippingAddress.addressLine2}
-                              </>
-                            )}
-                            <br />
-                            {order.shippingAddress.city}, {order.shippingAddress.state}
-                            <br />
-                            {order.shippingAddress.pinCode}
-                            <br />
-                            {order.shippingAddress.country}
-                          </div>
-                        </div>
-                        <div>
-                          <h3 className="font-bold mb-2">Order Summary</h3>
-                          <div className="text-sm space-y-1">
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Subtotal:</span>
-                              <span>{formatPrice(order.subtotal)}</span>
-                            </div>
-                            {order.totalDiscount > 0 && (
-                              <div className="flex justify-between text-green-600">
-                                <span>Discount:</span>
-                                <span>-{formatPrice(order.totalDiscount)}</span>
-                              </div>
-                            )}
-                            {order.shippingCharges > 0 && (
-                              <div className="flex justify-between">
-                                <span className="text-gray-600">Shipping:</span>
-                                <span>{formatPrice(order.shippingCharges)}</span>
-                              </div>
-                            )}
-                            <div className="flex justify-between font-bold pt-2 border-t">
-                              <span>Total:</span>
-                              <span>{formatPrice(order.orderTotal)}</span>
-                            </div>
-                          </div>
-                        </div>
+                    {showTracking[order.orderId] && (
+                      <div className="mt-4">
+                        <OrderTracking order={order} />
                       </div>
-                    </div>
-                  )}
-
-                  {/* Order Tracking Button - Only for active orders */}
-                  {order.status !== "cancelled" && order.status !== "returned" && order.status !== "return_initiated" && (
-                    <div className={`${expandedOrder === order.orderId ? "mt-5 pt-5 border-t border-gray-200" : "mt-5 pt-5 border-t border-gray-200"}`}>
-                      <button
-                        onClick={() =>
-                          setShowTracking((prev) => ({
-                            ...prev,
-                            [order.orderId]: !prev[order.orderId],
-                          }))
-                        }
-                        className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 font-semibold text-sm cursor-pointer transition-colors">
-                        <FaTruck className="text-blue-600" />
-                        {showTracking[order.orderId] ? "Hide Tracking" : "Track Order"}
-                      </button>
-                      {showTracking[order.orderId] && (
-                        <div className="mt-4">
-                          <OrderTracking order={order} />
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Cancel Order Confirmation Modal */}
-        <ConfirmationModal
-          open={showCancelConfirm !== null}
-          onClose={() => setShowCancelConfirm(null)}
-          onConfirm={() => confirmCancelOrder(showCancelConfirm)}
-          title="Cancel Order"
-          message="Are you sure you want to cancel this order? This action cannot be undone."
-          confirmText="Yes, Cancel Order"
-          cancelText="Keep Order"
-          type="danger"
-        />
-
-        {/* Return Modal */}
-        {showReturnModal && (
-          <div 
-            className="fixed inset-0 bg-gray-900 bg-opacity-30 backdrop-blur-md flex items-center justify-center z-50 p-4"
-            style={{ backdropFilter: 'blur(2px)' }}>
-            <div className="bg-white rounded-lg max-w-md w-full shadow-2xl border border-gray-200">
-              <div className="p-6 border-b border-gray-200">
-                <h2 className="text-xl font-bold">Initiate Return</h2>
-              </div>
-              <div className="p-6">
-                <div className="mb-4">
-                  <label className="block text-sm font-semibold mb-2">
-                    Reason for Return
-                  </label>
-                  <select
-                    value={returnReason}
-                    onChange={(e) => setReturnReason(e.target.value)}
-                    className="w-full border p-3 rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-400">
-                    <option value="">Select a reason</option>
-                    <option value="defective">Defective/Damaged Product</option>
-                    <option value="wrong_item">Wrong Item Received</option>
-                    <option value="size_issue">Size Issue</option>
-                    <option value="quality_issue">Quality Issue</option>
-                    <option value="not_as_described">Not as Described</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-              </div>
-              <div className="p-6 border-t border-gray-200 flex gap-3">
-                <button
-                  onClick={() => {
-                    setShowReturnModal(null);
-                    setReturnReason("");
-                  }}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 font-semibold cursor-pointer transition-colors">
-                  Cancel
-                </button>
-                <button
-                  onClick={() => handleReturnSubmit(showReturnModal)}
-                  className="flex-1 px-4 py-2 bg-black text-white rounded hover:bg-gray-800 font-semibold cursor-pointer transition-colors">
-                  Submit Return
-                </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
+          ))}
+        </div>
+      )}
+
+      {/* Cancel Order Confirmation Modal */}
+      <ConfirmationModal
+        open={showCancelConfirm !== null}
+        onClose={() => setShowCancelConfirm(null)}
+        onConfirm={() => confirmCancelOrder(showCancelConfirm)}
+        title="Cancel Order"
+        message="Are you sure you want to cancel this order? This action cannot be undone."
+        confirmText="Yes, Cancel Order"
+        cancelText="Keep Order"
+        type="danger"
+      />
+
+      {/* Return Modal */}
+      {showReturnModal && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          style={{ backdropFilter: 'blur(2px)' }}>
+          <div className={`rounded-lg max-w-md w-full shadow-2xl border ${
+            isDark ? "bg-[#121215] border-[#1f1f24] text-white" : "bg-white border-gray-200 text-black"
+          }`}>
+            <div className={`p-6 border-b ${isDark ? "border-[#1f1f24]" : "border-gray-200"}`}>
+              <h2 className="text-xl font-bold">Initiate Return</h2>
+            </div>
+            <div className="p-6">
+              <div className="mb-4">
+                <label className="block text-sm font-semibold mb-2">
+                  Reason for Return
+                </label>
+                <select
+                  value={returnReason}
+                  onChange={(e) => setReturnReason(e.target.value)}
+                  className={`w-full border p-3 rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-600 ${
+                    isDark ? "bg-[#18181b] border-[#27272a] text-white" : "border-gray-300 text-black"
+                  }`}>
+                  <option value="">Select a reason</option>
+                  <option value="defective">Defective/Damaged Product</option>
+                  <option value="wrong_item">Wrong Item Received</option>
+                  <option value="size_issue">Size Issue</option>
+                  <option value="quality_issue">Quality Issue</option>
+                  <option value="not_as_described">Not as Described</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+            </div>
+            <div className={`p-6 border-t flex gap-3 ${isDark ? "border-[#1f1f24]" : "border-gray-200"}`}>
+              <button
+                onClick={() => {
+                  setShowReturnModal(null);
+                  setReturnReason("");
+                }}
+                className={`flex-1 px-4 py-2 border rounded font-semibold cursor-pointer transition-colors ${
+                  isDark 
+                    ? "bg-[#18181b] hover:bg-[#27272a] text-[#f4f4f5] border-[#27272a]" 
+                    : "border-gray-300 hover:bg-gray-50 text-black"
+                }`}>
+                Cancel
+              </button>
+              <button
+                onClick={() => handleReturnSubmit(showReturnModal)}
+                className={`flex-1 px-4 py-2 rounded font-semibold cursor-pointer transition-colors ${
+                  isDark ? "bg-white text-black hover:bg-gray-200" : "bg-black text-white hover:bg-gray-800"
+                }`}>
+                Submit Return
+              </button>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
-  );
+  </div>
+);
 };
 
 export default Page;

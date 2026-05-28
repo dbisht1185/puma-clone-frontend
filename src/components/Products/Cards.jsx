@@ -5,11 +5,20 @@ import Image from "next/image";
 import Link from "next/link";
 import { FaRegHeart, FaHeart } from "react-icons/fa";
 import { useWishlist } from "@/context/WishlistContext";
-import { useCallback } from "react";
+import { useCallback, useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 const Cards = ({ filteredProducts = null }) => {
   const { isInWishlist, toggleWishlist } = useWishlist();
   const products = filteredProducts !== null ? filteredProducts : CardDatas;
+  
+  const [loadingSlug, setLoadingSlug] = useState(null);
+  const pathname = usePathname();
+
+  // Reset loading state if the user navigates back or path changes
+  useEffect(() => {
+    setLoadingSlug(null);
+  }, [pathname]);
 
   const handleWishlistClick = useCallback(
     (e, item) => {
@@ -37,19 +46,32 @@ const Cards = ({ filteredProducts = null }) => {
           const inWishlist = isInWishlist(productId);
           
           const isOutOfStock = (item.stock || 0) === 0;
+          const isLoading = loadingSlug === slug;
           
           return (
             <div key={index} className="flex flex-col overflow-hidden relative group">
-              <Link href={`/productdetails/${slug}`} className="flex flex-col cursor-pointer">
-                <div className="relative aspect-square w-full">
+              <Link 
+                href={`/productdetails/${slug}`} 
+                className="flex flex-col cursor-pointer h-full"
+                onClick={() => !isOutOfStock && setLoadingSlug(slug)}
+              >
+                <div className="relative aspect-square w-full bg-gray-50">
                   <Image
                     src={item.img}
                     alt={item.name}
                     fill
                     sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                    className={`object-contain ${isOutOfStock ? "opacity-60" : ""}`}
+                    className={`object-contain ${isOutOfStock ? "opacity-60" : ""} ${isLoading ? "opacity-70 blur-[1px]" : ""}`}
                     priority={index < 4}
                   />
+                  
+                  {/* Loading Overlay */}
+                  {isLoading && (
+                    <div className="absolute inset-0 bg-white/20 backdrop-blur-[2px] flex items-center justify-center z-30 transition-all duration-300">
+                      <div className="w-10 h-10 border-4 border-gray-200 border-t-red-600 rounded-full animate-spin shadow-lg"></div>
+                    </div>
+                  )}
+
                   {isOutOfStock && (
                     <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center z-20">
                       <div className="bg-red-600 text-white px-4 py-2 rounded font-bold text-sm md:text-base">

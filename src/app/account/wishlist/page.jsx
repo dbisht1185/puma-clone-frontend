@@ -48,7 +48,15 @@ const Page = () => {
             Home
           </Link>
           <span className="mx-1 text-gray-500"> • </span>
-          <Link href="/account" className="font-bold cursor-pointer">
+          <Link
+            href="/account"
+            onClick={() => {
+              if (path !== "/account" && typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("route-change-start"));
+              }
+            }}
+            className="font-bold cursor-pointer"
+          >
             My account
           </Link>
           <span className="mx-1 text-gray-500"> • </span>
@@ -159,7 +167,12 @@ const Page = () => {
         </div>
 
         <div
-          onClick={() => router.push("/account")}
+          onClick={() => {
+            if (path !== "/account" && typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("route-change-start"));
+            }
+            router.push("/account");
+          }}
           className="flex items-center justify-center cursor-pointer">
           <span className="border-b-3 border-[#a1a8af] hover:border-black text-sm font-bold cursor-pointer">
             RETURN TO MY ACCOUNT

@@ -9,14 +9,48 @@ import { SupportDatas } from "@/constant/Footer/Support";
 import { Drawer } from "@mui/material";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SiPuma } from "react-icons/si";
+import { FiSun, FiMoon } from "react-icons/fi";
 
 const Footer = () => {
   const [country, setCountry] = useState(false);
+  const [isLoadingAdmin, setIsLoadingAdmin] = useState(false);
+  const [shopTheme, setShopTheme] = useState("light");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("shopTheme") || "light";
+      setShopTheme(stored);
+      if (stored === "dark") {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+    }
+  }, []);
+
+  const handleThemeChange = (newTheme) => {
+    setShopTheme(newTheme);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("shopTheme", newTheme);
+      if (newTheme === "dark") {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+    }
+  };
 
   const handelCountry = () => {
     setCountry(!country);
+  };
+
+  const handleAdminClick = () => {
+    setIsLoadingAdmin(true);
+    setTimeout(() => {
+      setIsLoadingAdmin(false);
+    }, 8000);
   };
 
   return (
@@ -80,14 +114,24 @@ const Footer = () => {
                 {"Explore".toUpperCase()}
               </h1>
               <div className="flex gap-10">
-                <div className="border border-[rgb(102,98,98)] w-[65px] h-[65px] rounded-md flex flex-col items-center justify-center p-2 cursor-pointer hover:border-white">
-                  <SiPuma className="w-15 h-15" />
-                  <p className="tracking-[2px] text-[12px]">App</p>
-                </div>
-                <div className="border border-[rgb(102,98,98)] w-[65px] h-[65px] rounded-md flex flex-col items-center justify-center p-2 cursor-pointer hover:border-white">
-                  <SiPuma className="w-15 h-15" />
-                  <p className="tracking-[2px] text-[12px]">TRAC</p>
-                </div>
+                <Link href="/app">
+                  <div className="border border-[rgb(102,98,98)] w-[65px] h-[65px] rounded-md flex flex-col items-center justify-center p-2 cursor-pointer hover:border-white text-center">
+                    <SiPuma className="w-15 h-15" />
+                    <p className="tracking-[2px] text-[12px]">App</p>
+                  </div>
+                </Link>
+                <Link href="/trac">
+                  <div className="border border-[rgb(102,98,98)] w-[65px] h-[65px] rounded-md flex flex-col items-center justify-center p-2 cursor-pointer hover:border-white text-center">
+                    <SiPuma className="w-15 h-15" />
+                    <p className="tracking-[2px] text-[12px]">TRAC</p>
+                  </div>
+                </Link>
+                <Link href="/admin/dashboard" onClick={handleAdminClick}>
+                  <div className="border border-[rgb(102,98,98)] w-[65px] h-[65px] rounded-md flex flex-col items-center justify-center p-2 cursor-pointer hover:border-white text-center">
+                    <SiPuma className="w-15 h-15" />
+                    <p className="tracking-[2px] text-[12px]">Admin</p>
+                  </div>
+                </Link>
               </div>
             </div>
           </div>
@@ -100,7 +144,7 @@ const Footer = () => {
 
       <div className="block lg:hidden w-full">
       <AccordianFooter />
-      <div className=" items-center justify-center gap-2 md:px-10 px-5 my-5">
+      <div className="flex flex-col gap-3 md:px-10 px-5 my-5">
           <div
             onClick={handelCountry}
             className="w-full h-12 flex gap-3 items-center justify-center border border-[rgb(215,211,211)] cursor-pointer hover:border-white rounded-[2px] ">
@@ -114,6 +158,37 @@ const Footer = () => {
             </div>
             <h1 className="text-[18px] text-white font-bold">INDIA</h1>
           </div>
+
+          {/* Theme Switcher Button Capsule (Mobile) */}
+          <div className="flex bg-[#2a2a2a] border border-[#404040] p-1 rounded-full items-center justify-between gap-1 w-full relative select-none h-12">
+            {/* Sliding backdrop indicator */}
+            <div 
+              className="absolute top-1 bottom-1 bg-white rounded-full transition-all duration-300 ease-out shadow-lg"
+              style={{
+                width: 'calc(50% - 6px)',
+                left: shopTheme === 'dark' ? 'calc(50% + 2px)' : '4px',
+              }}
+            />
+            
+            <button
+              onClick={() => handleThemeChange("light")}
+              className={`flex-1 flex items-center justify-center gap-2 py-1 z-10 text-sm font-bold transition-colors duration-200 cursor-pointer h-full ${
+                shopTheme === "light" ? "text-black" : "text-gray-400 hover:text-white"
+              }`}
+            >
+              <FiSun className="text-base" />
+              LIGHT MODE
+            </button>
+            <button
+              onClick={() => handleThemeChange("dark")}
+              className={`flex-1 flex items-center justify-center gap-2 py-1 z-10 text-sm font-bold transition-colors duration-200 cursor-pointer h-full ${
+                shopTheme === "dark" ? "text-black" : "text-gray-400 hover:text-white"
+              }`}
+            >
+              <FiMoon className="text-base" />
+              DARK MODE
+            </button>
+          </div>
         </div>
       <div className="w-full lg:px-15 md:px-10 px-5 ">
         <div className="border-b-1 border-[rgb(215,211,211)]"></div>
@@ -126,15 +201,19 @@ const Footer = () => {
             <div
               key={index}
               className="border w-10 h-6 flex items-center justify-center bg-[#FFFFFF] rounded-[2px]">
-              <Image src={data.image} alt={data.name} width={25} height={10} />
+              <img
+                src={data.image}
+                alt={data.name}
+                className="max-h-[16px] max-w-[30px] object-contain"
+              />
             </div>
           ))}
         </div>
-        <div className=" items-center justify-center gap-2 hidden lg:flex">
+        <div className="flex flex-col items-center justify-center gap-4 hidden lg:flex">
           <div
             onClick={handelCountry}
-            className="w-40 h-15 flex gap-3 items-center justify-center border cursor-pointer hover:border-white rounded-md">
-            <div className="w-10 h-10 rounded-full overflow-hidden border relative">
+            className="w-40 h-12 flex gap-3 items-center justify-center border cursor-pointer hover:border-white rounded-md">
+            <div className="w-8 h-8 rounded-full overflow-hidden border relative">
               <Image
                 src="/india.svg"
                 alt="India"
@@ -142,7 +221,36 @@ const Footer = () => {
                 objectFit="cover"
               />
             </div>
-            <h1 className="text-[20px] text-white font-bold">INDIA</h1>
+            <h1 className="text-[18px] text-white font-bold">INDIA</h1>
+          </div>
+
+          {/* Theme Selector Capsule (Desktop) */}
+          <div className="flex bg-[#2a2a2a] border border-[#404040] p-1 rounded-full items-center justify-between gap-1 w-[160px] relative select-none h-10">
+            {/* Sliding backdrop indicator */}
+            <div 
+              className={`absolute top-1 bottom-1 w-[74px] bg-white rounded-full transition-all duration-300 ease-out shadow-lg ${
+                shopTheme === "dark" ? "left-[81px]" : "left-1"
+              }`}
+            />
+            
+            <button
+              onClick={() => handleThemeChange("light")}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1 z-10 text-xs font-bold transition-colors duration-200 cursor-pointer h-full ${
+                shopTheme === "light" ? "text-black" : "text-gray-400 hover:text-white"
+              }`}
+            >
+              <FiSun className="text-sm" />
+              LIGHT
+            </button>
+            <button
+              onClick={() => handleThemeChange("dark")}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1 z-10 text-xs font-bold transition-colors duration-200 cursor-pointer h-full ${
+                shopTheme === "dark" ? "text-black" : "text-gray-400 hover:text-white"
+              }`}
+            >
+              <FiMoon className="text-sm" />
+              DARK
+            </button>
           </div>
         </div>
         <div className="flex flex-col items-end justify-center">
@@ -180,6 +288,21 @@ const Footer = () => {
           <CountrySearch handleCountry={handelCountry} />
         </div>
       </Drawer>
+      {isLoadingAdmin && (
+        <div className="fixed inset-0 z-[9999] bg-[#000000eb] backdrop-blur-md flex flex-col items-center justify-center text-white font-sans">
+          <div className="relative flex flex-col items-center">
+            {/* Spinning Neon Glowing Loader */}
+            <div className="w-20 h-20 rounded-full border-4 border-t-red-600 border-r-transparent border-b-gray-800 border-l-transparent animate-spin shadow-[0_0_15px_rgba(220,38,38,0.5)]"></div>
+            <SiPuma className="w-12 h-12 text-white animate-pulse absolute top-4" />
+            <h2 className="mt-8 text-xl font-bold tracking-[3px] uppercase text-white animate-pulse">
+              PUMA ADMIN CONTROL
+            </h2>
+            <p className="mt-2 text-sm tracking-wider text-gray-400">
+              Initializing Secure Session...
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

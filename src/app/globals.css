@@ -53,3 +53,403 @@ button:disabled, input:disabled, select:disabled, [aria-disabled="true"] {
 input[type="text"], input[type="email"], input[type="tel"], input[type="password"], input[type="number"], textarea {
   cursor: text;
 }
+
+/* ==========================================
+   PUMA Admin Panel - Premium Light Mode Overrides
+   ========================================== */
+.admin-theme-light {
+  background-color: #f3f4f6 !important;
+  color: #1f2937 !important;
+}
+
+.admin-theme-light aside {
+  background-color: #ffffff !important;
+  border-color: #e5e7eb !important;
+}
+
+.admin-theme-light header {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  border-color: #e5e7eb !important;
+  backdrop-filter: blur(12px) !important;
+}
+
+/* Override dark divs and cards */
+.admin-theme-light .bg-\[\#060608\] {
+  background-color: #f3f4f6 !important;
+}
+
+.admin-theme-light .bg-\[\#0c0c0e\],
+.admin-theme-light .bg-\[\#0c0c0e\]\/80 {
+  background-color: #ffffff !important;
+  border-color: #e5e7eb !important;
+}
+
+.admin-theme-light .bg-\[\#111115\],
+.admin-theme-light .bg-\[\#16161a\] {
+  background-color: #ffffff !important;
+  border-color: #e5e7eb !important;
+}
+
+.admin-theme-light .bg-\[\#121215\] {
+  background-color: #f9fafb !important;
+  border-color: #e5e7eb !important;
+}
+
+.admin-theme-light .bg-\[\#131317\] {
+  background-color: #f3f4f6 !important;
+  border-color: #e5e7eb !important;
+}
+
+/* Borders */
+.admin-theme-light .border-\[\#1a1a1f\],
+.admin-theme-light .border-\[\#2a2a30\],
+.admin-theme-light .border-\[\#23232a\] {
+  border-color: #e5e7eb !important;
+}
+
+/* Text Colors */
+.admin-theme-light .text-white,
+.admin-theme-light h1,
+.admin-theme-light h2,
+.admin-theme-light h3,
+.admin-theme-light h4,
+.admin-theme-light th,
+.admin-theme-light td,
+.admin-theme-light span.font-bold {
+  color: #1f2937 !important;
+}
+
+.admin-theme-light .text-gray-100 {
+  color: #1f2937 !important;
+}
+
+.admin-theme-light .text-gray-300 {
+  color: #374151 !important;
+}
+
+.admin-theme-light .text-gray-400,
+.admin-theme-light .text-gray-500,
+.admin-theme-light p {
+  color: #4b5563 !important;
+}
+
+/* Hover effects */
+.admin-theme-light .hover\:bg-\[\#121215\]\/50:hover {
+  background-color: rgba(243, 244, 246, 0.7) !important;
+}
+
+.admin-theme-light .hover\:bg-\[\#121215\]:hover {
+  background-color: #f3f4f6 !important;
+  color: #111827 !important;
+}
+
+.admin-theme-light .hover\:bg-\[\#1a1a20\]:hover {
+  background-color: #e5e7eb !important;
+}
+
+/* Table Header lines */
+.admin-theme-light tr.border-b {
+  border-color: #e5e7eb !important;
+}
+
+.admin-theme-light tbody.divide-y > tr {
+  border-color: #e5e7eb !important;
+}
+
+/* Input boxes & form fields */
+.admin-theme-light input,
+.admin-theme-light select,
+.admin-theme-light textarea {
+  background-color: #ffffff !important;
+  color: #1f2937 !important;
+  border-color: #d1d5db !important;
+}
+
+.admin-theme-light input:focus,
+.admin-theme-light select:focus,
+.admin-theme-light textarea:focus {
+  border-color: #ef4444 !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15) !important;
+}
+
+/* MUI or standard Modals overlay */
+.admin-theme-light .bg-black\/80 {
+  background-color: rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Badge status custom overrides in light mode to keep high readability */
+.admin-theme-light .bg-green-950\/20 {
+  background-color: #f0fdf4 !important;
+  color: #166534 !important;
+  border-color: #bbf7d0 !important;
+}
+
+.admin-theme-light .bg-yellow-950\/20 {
+  background-color: #fef9c3 !important;
+  color: #854d0e !important;
+  border-color: #fef08a !important;
+}
+
+.admin-theme-light .bg-blue-950\/20 {
+  background-color: #eff6ff !important;
+  color: #1e40af !important;
+  border-color: #bfdbfe !important;
+}
+
+.admin-theme-light .bg-red-950\/20 {
+  background-color: #fef2f2 !important;
+  color: #991b1b !important;
+  border-color: #fca5a5 !important;
+}
+
+/* Information / overview panel */
+.admin-theme-light .bg-red-950\/15 {
+  background-color: #eff6ff !important;
+  border-color: #bfdbfe !important;
+}
+.admin-theme-light .text-red-400 {
+  color: #2563eb !important;
+}
+
+/* ==========================================
+   PUMA Storefront - Premium Dark Mode Overrides
+   ========================================== */
+html.dark, html.dark body, html.dark main {
+  background: #0c0c0e !important;
+  background-color: #0c0c0e !important;
+  color: #f3f4f6 !important;
+}
+
+/* Page canvas and core backgrounds */
+html.dark .bg-gray-50,
+html.dark div.bg-gray-50,
+html.dark .bg-white,
+html.dark .bg-[#f6f7f8],
+html.dark .bg-gray-100 {
+  background: #0e0e11 !important;
+  background-color: #0e0e11 !important;
+}
+
+/* Sidebar and navigation overrides */
+html.dark .lg\:max-w-\[300px\] {
+  background-color: #121215 !important;
+  border-right: 1px solid #1f1f24 !important;
+}
+html.dark .lg\:max-w-\[300px\] a,
+html.dark .lg\:max-w-\[300px\] button {
+  color: #d1d5db !important;
+}
+html.dark .lg\:max-w-\[300px\] .bg-white {
+  background-color: #1a1a20 !important;
+  color: #ffffff !important;
+}
+html.dark .lg\:max-w-\[300px\] .hover\:bg-\[\#dfe0e1\]:hover {
+  background-color: #23232c !important;
+}
+
+/* Headers, Titles and Texts */
+html.dark h1,
+html.dark h2,
+html.dark h3,
+html.dark h4,
+html.dark h5,
+html.dark h6,
+html.dark .text-4xl,
+html.dark .text-3xl,
+html.dark .text-2xl,
+html.dark .text-xl,
+html.dark .text-lg,
+html.dark .text-black,
+html.dark .text-gray-900,
+html.dark .text-gray-950,
+html.dark .font-bold {
+  color: #ffffff !important;
+}
+
+html.dark p,
+html.dark span,
+html.dark label,
+html.dark .text-gray-600,
+html.dark .text-gray-700,
+html.dark .text-gray-800,
+html.dark .text-gray-500 {
+  color: #9ca3af !important;
+}
+
+/* Interactive accent details */
+html.dark .text-red-600,
+html.dark .text-red-500 {
+  color: #ef4444 !important;
+}
+
+/* Cards & Grid Containers (like address cards, order list card items, wishlist items) */
+html.dark .bg-white.rounded-lg,
+html.dark .bg-white.rounded-xl,
+html.dark .bg-white.rounded-2xl,
+html.dark .bg-white.border,
+html.dark .rounded-2xl.border,
+html.dark .border-gray-200.bg-white,
+html.dark .bg-white.shadow-sm,
+html.dark .bg-white.shadow-lg {
+  background-color: #16161a !important;
+  border-color: #222228 !important;
+}
+
+/* Specific borders */
+html.dark .border,
+html.dark .border-gray-200,
+html.dark .border-gray-300,
+html.dark .border-gray-100,
+html.dark .border-\[\#e5e7eb\],
+html.dark .border-b,
+html.dark .border-t,
+html.dark .border-r,
+html.dark .border-l {
+  border-color: #1f1f24 !important;
+}
+
+/* Forms & Inputs */
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #111115 !important;
+  color: #ffffff !important;
+  border-color: #2a2a30 !important;
+}
+html.dark input:focus,
+html.dark select:focus,
+html.dark textarea:focus {
+  border-color: #ef4444 !important;
+  outline: none !important;
+}
+
+/* Button modifications and overlays */
+html.dark .hover\:bg-gray-50:hover,
+html.dark .hover\:bg-gray-100:hover,
+html.dark .hover\:bg-gray-200:hover {
+  background-color: #1b1b22 !important;
+}
+html.dark .bg-black {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+html.dark .bg-black:hover {
+  background-color: #e5e7eb !important;
+}
+html.dark .text-white.bg-black {
+  color: #000000 !important;
+}
+
+/* Breadcrumb lists and separators */
+html.dark .text-black a,
+html.dark .text-black span {
+  color: #e5e7eb !important;
+}
+
+/* Confirmation and dialog modals */
+html.dark .bg-white.rounded-lg.max-w-md,
+html.dark .bg-white.rounded-lg.max-w-lg {
+  background-color: #0e0e11 !important;
+  border: 1px solid #1f1f24 !important;
+}
+
+/* Mobile accordions and detail blocks */
+html.dark .MuiAccordion-root,
+html.dark .MuiAccordionSummary-root,
+html.dark .MuiAccordionDetails-root {
+  background-color: #0e0e11 !important;
+  color: #ffffff !important;
+}
+
+/* ==========================================
+   PUMA Storefront - Orders Page Premium Dark Mode
+   ========================================== */
+html.dark .bg-white.rounded-lg.shadow-sm.border.border-gray-200 {
+  background-color: #121215 !important;
+  border-color: #1f1f24 !important;
+}
+
+/* Status Badges Styling */
+html.dark .text-green-600.bg-green-50.border-green-200 {
+  background-color: rgba(34, 197, 94, 0.15) !important;
+  color: #4ade80 !important;
+  border-color: rgba(34, 197, 94, 0.35) !important;
+}
+html.dark .text-blue-600.bg-blue-50.border-blue-200 {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+  color: #60a5fa !important;
+  border-color: rgba(59, 130, 246, 0.35) !important;
+}
+html.dark .text-red-600.bg-red-50.border-red-200 {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+  color: #f87171 !important;
+  border-color: rgba(239, 68, 68, 0.35) !important;
+}
+html.dark .text-orange-600.bg-orange-50.border-orange-200 {
+  background-color: rgba(249, 115, 22, 0.15) !important;
+  color: #fb923c !important;
+  border-color: rgba(249, 115, 22, 0.35) !important;
+}
+html.dark .text-yellow-600.bg-yellow-50.border-yellow-200 {
+  background-color: rgba(234, 179, 8, 0.15) !important;
+  color: #facc15 !important;
+  border-color: rgba(234, 179, 8, 0.35) !important;
+}
+html.dark .text-gray-600.bg-gray-50.border-gray-200 {
+  background-color: rgba(156, 163, 175, 0.1) !important;
+  color: #9ca3af !important;
+  border-color: rgba(156, 163, 175, 0.25) !important;
+}
+
+/* Action Buttons inside Orders List */
+html.dark button.border.border-gray-300.rounded.hover\:bg-gray-50,
+html.dark .px-4.py-2.border.border-gray-300.rounded,
+html.dark button.px-4.py-2.border.border-gray-300.rounded {
+  background-color: #18181b !important;
+  color: #f4f4f5 !important;
+  border-color: #27272a !important;
+}
+html.dark button.border.border-gray-300.rounded.hover\:bg-gray-50:hover,
+html.dark .px-4.py-2.border.border-gray-300.rounded:hover,
+html.dark button.px-4.py-2.border.border-gray-300.rounded:hover {
+  background-color: #27272a !important;
+  border-color: #3f3f46 !important;
+}
+
+/* Date Selection Box Section */
+html.dark .bg-white.p-4.rounded-lg.shadow-sm {
+  background-color: #121215 !important;
+  border: 1px solid #1f1f24 !important;
+}
+html.dark select.border.p-4.w-full.bg-white {
+  background-color: #18181b !important;
+  color: #ffffff !important;
+  border-color: #27272a !important;
+}
+
+/* Order Tracking vertical line and pending circles */
+html.dark .bg-gray-200 {
+  background-color: #27272a !important;
+}
+html.dark .bg-white.border-gray-300 {
+  background-color: #121215 !important;
+  border-color: #27272a !important;
+}
+
+/* Return / Cancellation Dialog overlays and modals */
+html.dark .fixed.bg-gray-900.bg-opacity-30 {
+  background-color: rgba(0, 0, 0, 0.75) !important;
+}
+html.dark .bg-white.rounded-lg.max-w-md.w-full {
+  background-color: #121215 !important;
+  border-color: #27272a !important;
+}
+html.dark .bg-white.rounded-lg.max-w-md.w-full div {
+  color: #ffffff !important;
+}
+html.dark .bg-white.rounded-lg.max-w-md.w-full select {
+  background-color: #18181b !important;
+  color: #ffffff !important;
+  border-color: #27272a !important;
+}

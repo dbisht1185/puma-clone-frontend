@@ -1,10 +1,11 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/layouts/Navbar";
-import Footer from "@/layouts/Footer";
+import LayoutWrapper from "@/components/common/LayoutWrapper";
 import Toaster from "@/context/toaster";
 import { CartProvider } from "@/context/CartContext";
 import { WishlistProvider } from "@/context/WishlistContext";
+import QueryProvider from "@/providers/QueryProvider";
+import GlobalLoader from "@/components/common/GlobalLoader";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,17 +25,38 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var shopTheme = localStorage.getItem('shopTheme') || 'light';
+                  if (shopTheme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                  } else {
+                    document.documentElement.classList.remove('dark');
+                  }
+                } catch (e) {}
+              })();
+            `
+          }}
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <Toaster>
-          <CartProvider>
-            <WishlistProvider>
-              <Navbar />
-              {children}
-              <Footer />
-            </WishlistProvider>
-          </CartProvider>
-        </Toaster>
+        <QueryProvider>
+          <GlobalLoader />
+          <Toaster>
+            <CartProvider>
+              <WishlistProvider>
+                <LayoutWrapper>
+                  {children}
+                </LayoutWrapper>
+              </WishlistProvider>
+            </CartProvider>
+          </Toaster>
+        </QueryProvider>
       </body>
     </html>
   );

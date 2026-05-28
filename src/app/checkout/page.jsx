@@ -13,7 +13,8 @@ import { useCart } from "@/context/CartContext";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/context/toaster";
 import { getPromoFromStorage, clearPromoStorage } from "@/utils/promoStorage";
-import { addOrderToStorage } from "@/utils/orderStorage";
+import { ordersApi } from "@/mocks/orders";
+import { pincodesApi } from "@/mocks/pincodes";
 import Image from "next/image";
 
 const Page = () => {
@@ -28,6 +29,7 @@ const Page = () => {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
   const [promoDiscount, setPromoDiscount] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
 
   // Form state
   const [formData, setFormData] = useState({
@@ -79,14 +81,57 @@ const Page = () => {
     if (cart.length === 0 && currentStep === 0) {
       router.push("/cart");
     }
-  }, [cart.length, router]);
+  }, [cart.length, currentStep, router]);
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: null }));
+    }
   };
 
   const handleCheckboxChange = () => {
     setIsSameAddress((prev) => !prev);
+  };
+
+  const validateFields = (updateState = true) => {
+    let newErrors = {};
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const phoneRegex = /^[0-9]{10}$/;
+    const pinRegex = /^[0-9]{6}$/;
+
+    if (!formData.firstName.trim()) newErrors.firstName = "First name is required";
+    if (!formData.lastName.trim()) newErrors.lastName = "Last name is required";
+    
+    if (!formData.pinCode.trim()) {
+      newErrors.pinCode = "Pin code is required";
+    } else if (!pinRegex.test(formData.pinCode.replace(/\s/g, ''))) {
+      newErrors.pinCode = "Pin code must be 6 digits";
+    }
+
+    if (!formData.addressLine1.trim()) newErrors.addressLine1 = "Address is required";
+    if (!formData.city.trim()) newErrors.city = "City is required";
+    
+    if (!selectedState) newErrors.state = "State is required";
+    if (!selectedCountry) newErrors.country = "Country is required";
+
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!emailRegex.test(formData.email)) {
+      newErrors.email = "Invalid email format";
+    }
+
+    if (!formData.phoneNumber.trim()) {
+      newErrors.phoneNumber = "Phone number is required";
+    } else if (!phoneRegex.test(formData.phoneNumber.replace(/\s/g, '').replace(/^\+91/, ''))) {
+      newErrors.phoneNumber = "Phone number must be 10 digits";
+    }
+
+    if (updateState) {
+      setErrors(newErrors);
+    }
+    return Object.keys(newErrors).length === 0;
   };
 
   const validateStep = (step) => {
@@ -94,17 +139,7 @@ const Page = () => {
       case 0: // Cart
         return cart.length > 0;
       case 1: // Shipping
-        return (
-          formData.firstName &&
-          formData.lastName &&
-          formData.pinCode &&
-          formData.addressLine1 &&
-          formData.city &&
-          formData.email &&
-          formData.phoneNumber &&
-          selectedState &&
-          selectedCountry
-        );
+        return validateFields(false);
       case 2: // Payment
         return selectedPaymentMethod !== "";
       case 3: // Summary
@@ -114,7 +149,53 @@ const Page = () => {
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    if (currentStep === 1) {
+      if (!validateFields(true)) {
+        setAlert({
+          open: true,
+          message: "Please fix the errors in the shipping form",
+          severity: "error"
+        });
+        return;
+      }
+      
+      setIsSubmitting(true);
+      try {
+        const res = await pincodesApi.checkPincode(formData.pinCode.replace(/\s/g, ''));
+        
+        if (res.data && res.data.status === "SUCCESS") {
+          const pincodeData = res.data.data;
+          if (!pincodeData.isServiceable) {
+            setAlert({
+              open: true,
+              message: "Sorry, this Pincode is not serviceable. Please try another one.",
+              severity: "error"
+            });
+            setIsSubmitting(false);
+            return;
+          }
+        } else {
+          setAlert({
+            open: true,
+            message: res.data?.message || "Delivery not available to this PIN code.",
+            severity: "error"
+          });
+          setIsSubmitting(false);
+          return;
+        }
+      } catch (error) {
+        setAlert({
+          open: true,
+          message: error?.message || "Error validating PIN code.",
+          severity: "error"
+        });
+        setIsSubmitting(false);
+        return;
+      }
+      setIsSubmitting(false);
+    }
+    
     if (validateStep(currentStep)) {
       if (currentStep < 3) {
         setCurrentStep(currentStep + 1);
@@ -150,10 +231,19 @@ const Page = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!validateStep(1) || !validateStep(2)) {
+    if (!validateStep(1)) {
       setAlert({
         open: true,
-        message: "Please complete all required fields",
+        message: "Please fix the errors in the shipping form",
+        severity: "error",
+      });
+      return;
+    }
+
+    if (!validateStep(2)) {
+      setAlert({
+        open: true,
+        message: "Please select a payment method",
         severity: "error",
       });
       return;
@@ -187,78 +277,42 @@ const Page = () => {
       };
 
       const appliedPromo = getPromoFromStorage();
-      const response = await fetch("/api/checkout", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          cart,
-          shippingAddress,
-          billingAddress,
-          paymentMethod: selectedPaymentMethod,
-          promoCode: appliedPromo?.code || null,
-          promoDiscount: promoDiscount || 0,
-        }),
-      });
+      
+      const payload = {
+        shippingAddress,
+        billingAddress,
+        paymentMethod: selectedPaymentMethod,
+        isSameAddress,
+        promoCode: appliedPromo?.code || null,
+      };
 
-      const data = await response.json();
+      const response = await ordersApi.placeOrder(payload);
 
-      if (data.success) {
-        const { subtotal, totalDiscount } = getCartTotals();
-        const shippingCharges = 0;
+      if (response.data?.status === 'SUCCESS') {
+        const orderData = response.data.data;
         
-        const order = {
-          orderId: data.orderId,
-          orderDate: new Date().toISOString(),
-          status: "ordered",
-          items: cart.map((item) => ({
-            productId: item.productId,
-            name: item.name,
-            image: item.image,
-            size: item.size,
-            quantity: item.quantity,
-            basePrice: item.basePrice,
-            unitPrice: item.basePrice - (item.discountAmount || 0),
-            discountAmount: item.discountAmount || 0,
-            discountType: item.discountType,
-            discountValue: item.discountValue,
-          })),
-          subtotal,
-          totalDiscount: totalDiscount + promoDiscount,
-          shippingCharges,
-          orderTotal: subtotal - totalDiscount - promoDiscount + shippingCharges,
-          shippingAddress,
-          billingAddress,
-          paymentMethod: selectedPaymentMethod,
-          promoCode: appliedPromo?.code || null,
-          estimatedDelivery: data.estimatedDelivery || new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-        };
-
-        addOrderToStorage(order);
-
         setAlert({
           open: true,
-          message: `Order placed successfully! Order ID: ${data.orderId}`,
+          message: `Order placed successfully! Order ID: ${orderData._id}`,
           severity: "success",
         });
-        clearCart();
+        
+        await clearCart();
         clearPromoStorage();
-        setTimeout(() => {
-          router.push(`/account/orders`);
-        }, 2000);
+        
+        router.push(`/account/orders`);
       } else {
         setAlert({
           open: true,
-          message: data.message || "Checkout failed. Please try again.",
+          message: response.data?.message || "Failed to place order. Please try again.",
           severity: "error",
         });
       }
     } catch (error) {
-      console.error("Checkout error:", error);
+      console.error("Order submission error:", error);
       setAlert({
         open: true,
-        message: "An error occurred during checkout. Please try again.",
+        message: error.response?.data?.message || "An error occurred while placing your order. Please try again later.",
         severity: "error",
       });
     } finally {
@@ -312,9 +366,9 @@ const Page = () => {
                       placeholder="First Name"
                       value={formData.firstName}
                       onChange={(e) => handleInputChange("firstName", e.target.value)}
-                      className="border w-full px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-gray-400 cursor-text"
-                      required
+                      className={`border w-full px-3 py-2 text-base focus:outline-none focus:ring-2 ${errors.firstName ? 'border-red-500 focus:ring-red-200' : 'focus:ring-gray-400'} cursor-text`}
                     />
+                    {errors.firstName && <span className="text-red-500 text-xs mt-1">{errors.firstName}</span>}
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-sm font-bold">
@@ -325,9 +379,9 @@ const Page = () => {
                       placeholder="Last Name"
                       value={formData.lastName}
                       onChange={(e) => handleInputChange("lastName", e.target.value)}
-                      className="border w-full px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-gray-400 cursor-text"
-                      required
+                      className={`border w-full px-3 py-2 text-base focus:outline-none focus:ring-2 ${errors.lastName ? 'border-red-500 focus:ring-red-200' : 'focus:ring-gray-400'} cursor-text`}
                     />
+                    {errors.lastName && <span className="text-red-500 text-xs mt-1">{errors.lastName}</span>}
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-sm font-bold">
@@ -338,9 +392,9 @@ const Page = () => {
                       placeholder="PIN code"
                       value={formData.pinCode}
                       onChange={(e) => handleInputChange("pinCode", e.target.value)}
-                      className="border w-full px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-gray-400 cursor-text"
-                      required
+                      className={`border w-full px-3 py-2 text-base focus:outline-none focus:ring-2 ${errors.pinCode ? 'border-red-500 focus:ring-red-200' : 'focus:ring-gray-400'} cursor-text`}
                     />
+                    {errors.pinCode && <span className="text-red-500 text-xs mt-1">{errors.pinCode}</span>}
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-sm font-bold">
@@ -351,9 +405,9 @@ const Page = () => {
                       placeholder="City"
                       value={formData.city}
                       onChange={(e) => handleInputChange("city", e.target.value)}
-                      className="border w-full px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-gray-400 cursor-text"
-                      required
+                      className={`border w-full px-3 py-2 text-base focus:outline-none focus:ring-2 ${errors.city ? 'border-red-500 focus:ring-red-200' : 'focus:ring-gray-400'} cursor-text`}
                     />
+                    {errors.city && <span className="text-red-500 text-xs mt-1">{errors.city}</span>}
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-sm font-bold">
@@ -364,9 +418,9 @@ const Page = () => {
                       placeholder="Address Line 1"
                       value={formData.addressLine1}
                       onChange={(e) => handleInputChange("addressLine1", e.target.value)}
-                      className="border w-full px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-gray-400 cursor-text"
-                      required
+                      className={`border w-full px-3 py-2 text-base focus:outline-none focus:ring-2 ${errors.addressLine1 ? 'border-red-500 focus:ring-red-200' : 'focus:ring-gray-400'} cursor-text`}
                     />
+                    {errors.addressLine1 && <span className="text-red-500 text-xs mt-1">{errors.addressLine1}</span>}
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-sm font-bold">ADDRESS LINE 2</label>
@@ -384,9 +438,11 @@ const Page = () => {
                     </label>
                     <select
                       value={selectedState}
-                      onChange={(e) => setSelectedState(e.target.value)}
-                      className="border w-full px-3 py-2 text-base cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-400"
-                      required>
+                      onChange={(e) => {
+                        setSelectedState(e.target.value);
+                        if (errors.state) setErrors(prev => ({...prev, state: null}));
+                      }}
+                      className={`border w-full px-3 py-2 text-base cursor-pointer focus:outline-none focus:ring-2 ${errors.state ? 'border-red-500 focus:ring-red-200' : 'focus:ring-gray-400'}`}>
                       <option value="">Select a state</option>
                       {states.map((state, index) => (
                         <option key={index} value={state}>
@@ -394,6 +450,7 @@ const Page = () => {
                         </option>
                       ))}
                     </select>
+                    {errors.state && <span className="text-red-500 text-xs mt-1">{errors.state}</span>}
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-sm font-bold">
@@ -401,9 +458,11 @@ const Page = () => {
                     </label>
                     <select
                       value={selectedCountry}
-                      onChange={(e) => setSelectedCountry(e.target.value)}
-                      className="border w-full px-3 py-2 text-base cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-400"
-                      required>
+                      onChange={(e) => {
+                        setSelectedCountry(e.target.value);
+                        if (errors.country) setErrors(prev => ({...prev, country: null}));
+                      }}
+                      className={`border w-full px-3 py-2 text-base cursor-pointer focus:outline-none focus:ring-2 ${errors.country ? 'border-red-500 focus:ring-red-200' : 'focus:ring-gray-400'}`}>
                       <option value="">Select a country</option>
                       {countries.map((country, index) => (
                         <option key={index} value={country}>
@@ -411,6 +470,7 @@ const Page = () => {
                         </option>
                       ))}
                     </select>
+                    {errors.country && <span className="text-red-500 text-xs mt-1">{errors.country}</span>}
                   </div>
                 </div>
               </div>
@@ -427,9 +487,9 @@ const Page = () => {
                       placeholder="Email"
                       value={formData.email}
                       onChange={(e) => handleInputChange("email", e.target.value)}
-                      className="border w-full px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-gray-400 cursor-text"
-                      required
+                      className={`border w-full px-3 py-2 text-base focus:outline-none focus:ring-2 ${errors.email ? 'border-red-500 focus:ring-red-200' : 'focus:ring-gray-400'} cursor-text`}
                     />
+                    {errors.email && <span className="text-red-500 text-xs mt-1">{errors.email}</span>}
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-sm font-bold">
@@ -440,9 +500,9 @@ const Page = () => {
                       placeholder="Phone Number"
                       value={formData.phoneNumber}
                       onChange={(e) => handleInputChange("phoneNumber", e.target.value)}
-                      className="border w-full px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-gray-400 cursor-text"
-                      required
+                      className={`border w-full px-3 py-2 text-base focus:outline-none focus:ring-2 ${errors.phoneNumber ? 'border-red-500 focus:ring-red-200' : 'focus:ring-gray-400'} cursor-text`}
                     />
+                    {errors.phoneNumber && <span className="text-red-500 text-xs mt-1">{errors.phoneNumber}</span>}
                   </div>
                 </div>
               </div>

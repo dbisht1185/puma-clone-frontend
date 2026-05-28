@@ -2,7 +2,7 @@
 import { NavigationDatass } from "@/constant/ProductsDerails/NavigationDatas";
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { RiRulerLine } from "react-icons/ri";
 import { IoChevronDownSharp } from "react-icons/io5";
@@ -18,6 +18,9 @@ import { useWishlist } from "@/context/WishlistContext";
 import { CardDatas } from "@/constant/Products/Cards";
 import ReadMore from "@/components/ReadMore";
 import { calculatePrice, formatPrice, parsePrice } from "@/utils/price";
+import { productsApi } from "@/mocks/products";
+import { pincodesApi } from "@/mocks/pincodes";
+import { useQuery } from "@tanstack/react-query";
 
 const Page = () => {
   const params = useParams();
@@ -34,33 +37,78 @@ const Page = () => {
   const [deliveryInfo, setDeliveryInfo] = useState(null);
   const [checkingDelivery, setCheckingDelivery] = useState(false);
   const [showSizeGuide, setShowSizeGuide] = useState(false);
+  const [selectedColor, setSelectedColor] = useState(null);
 
-  // Get product data based on slug
-  const product = useMemo(() => {
-    const slug = params.details;
-    return CardDatas.find(
-      (item) => item.slug === slug || item.productId === slug
-    ) || {
-      productId: slug,
-      slug: slug,
-      name: "Easy Rider Leather Unisex Sneakers",
-      price: "₹8,999",
-      offerPrice: "₹7,199",
-      description: "",
-      img: "/Images/Products/cards/Easy-Rider-Leather-Unisex-Sneakers2.jpeg",
-      basePrice: 8999,
-      discountType: "PERCENT",
-      discountValue: 20,
-      stock: 10,
-    };
-  }, [params.details]);
+  const slug = params.details;
 
-  const productId = product.productId || product.slug;
-  const inWishlist = isInWishlist(productId);
-  const isOutOfStock = (product.stock || 0) === 0;
+  // Use TanStack Query to fetch the full database product dynamically
+  const { data: product = {
+    productId: slug,
+    slug: slug,
+    name: "Easy Rider Leather Unisex Sneakers",
+    price: "₹8,999",
+    offerPrice: "₹7,199",
+    description: "",
+    img: "/Images/Products/cards/Easy-Rider-Leather-Unisex-Sneakers2.jpeg",
+    basePrice: 8999,
+    discountType: "PERCENT",
+    discountValue: 20,
+    stock: 10,
+  }, isLoading: dbLoading } = useQuery({
+    queryKey: ["product", slug],
+    queryFn: async () => {
+      const res = await productsApi.getProductByIdOrSlug(slug);
+      return res.data?.status === "SUCCESS" ? res.data.data : null;
+    },
+    initialData: () => {
+      return CardDatas.find((item) => item.slug === slug || item.productId === slug);
+    },
+  });
+
+  // Track recently viewed products in localStorage for dynamic Block11 homepage rendering
+  useEffect(() => {
+    if (product && product.name && typeof window !== "undefined") {
+      const stored = localStorage.getItem("recentlyViewed");
+      let list = [];
+      try {
+        list = stored ? JSON.parse(stored) : [];
+      } catch (e) {
+        list = [];
+      }
+
+      // Filter out duplicate entries by name
+      list = list.filter((item) => item.name !== product.name);
+
+      // Add current product to the top of recently viewed
+      list.unshift({
+        name: product.name,
+        price: product.price || `₹${product.basePrice?.toLocaleString("en-IN")}`,
+        offerPrice: product.offerPrice,
+        img: product.img,
+      });
+
+      // Maintain max of 10 items
+      list = list.slice(0, 10);
+
+      localStorage.setItem("recentlyViewed", JSON.stringify(list));
+    }
+  }, [product]);
+
+  // Set default color when product loads
+  useEffect(() => {
+    if (product?.colors && product.colors.length > 0 && !selectedColor) {
+      setSelectedColor(product.colors[0]);
+    } else if (product?.color && !selectedColor) {
+      setSelectedColor({ colorName: product.color, colorCode: product.colorCode || "#000000" });
+    }
+  }, [product, selectedColor]);
+
+  const productId = product?.productId || product?.slug;
+  const inWishlist = productId ? isInWishlist(productId) : false;
+  const isOutOfStock = (product?.stock || 0) === 0;
   
-  // Available sizes with stock
-  const sizes = [
+  // Available sizes dynamically pulled from database, falling back to static
+  const sizes = product?.sizes && product.sizes.length > 0 ? product.sizes : [
     { size: "UK 5", stock: 3 },
     { size: "UK 6", stock: 5 },
     { size: "UK 11", stock: 2 },
@@ -68,9 +116,9 @@ const Page = () => {
     { size: "UK 13", stock: 1 },
   ];
 
-  const basePrice = product.basePrice || parsePrice(product.price);
-  const discountType = product.discountType || (product.offerPrice ? "PERCENT" : null);
-  const discountValue = product.discountValue || (product.offerPrice ? 20 : 0);
+  const basePrice = product?.basePrice || parsePrice(product?.price || 0);
+  const discountType = product?.discountType || (product?.offerPrice ? "PERCENT" : null);
+  const discountValue = product?.discountValue || (product?.offerPrice ? 20 : 0);
   
   const { unitPrice, discountAmount } = calculatePrice({
     basePrice,
@@ -83,14 +131,15 @@ const Page = () => {
     setSelectedImageIndex(index);
   };
 
-  const images = product.images || [
+  const images = product?.images && product.images.length > 0 ? product.images : [
+    product?.img || "/Images/Products/cards/Easy-Rider-Leather-Unisex-Sneakers2.jpeg",
     "/Images/Products/cards/Easy-Rider-Leather-Unisex-Sneakers (6).jpeg",
     "/Images/Products/cards/Easy-Rider-Mesh-Unisex-Sneakers.jpeg",
   ];
 
   const handleSelect = (qty) => {
     const selectedSizeData = sizes.find((s) => s.size === selectedSize);
-    const maxStock = selectedSizeData?.stock || product.stock || 10;
+    const maxStock = selectedSizeData?.stock || product?.stock || 10;
     
     if (qty > maxStock) {
       return;
@@ -125,20 +174,20 @@ const Page = () => {
       return;
     }
 
-    const stock = sizeData?.stock || product.stock || 10;
+    const stock = sizeData?.stock || product?.stock || 10;
 
     const success = addToCart({
       productId,
-      name: product.name,
-      image: product.img,
+      name: product?.name,
+      image: product?.img,
       size: selectedSize,
       basePrice,
       discountType,
       discountValue,
       quantity: selectedQty,
       stock,
-      color: product.color || "PUMA Black-Frosted Ivory",
-      styleNumber: product.styleNumber || "",
+      color: selectedColor ? selectedColor.colorName : (product?.color || "PUMA Black-Frosted Ivory"),
+      styleNumber: product?.styleNumber || "",
     });
 
     if (success) {
@@ -149,12 +198,12 @@ const Page = () => {
   const handleWishlistToggle = () => {
     toggleWishlist({
       productId,
-      name: product.name,
-      image: product.img,
+      name: product?.name,
+      image: product?.img,
       basePrice,
       discountType,
       discountValue,
-      slug: product.slug || productId,
+      slug: product?.slug || productId,
     });
   };
 
@@ -168,7 +217,7 @@ const Page = () => {
     setHoverQty(selectedQty); // Reset hover when closing
   };
 
-  // Mock function to check delivery based on pincode
+  // Dynamic function to check delivery based on pincode API
   const checkDelivery = async (codeToCheck = null) => {
     const code = codeToCheck || pinCode;
     
@@ -181,50 +230,38 @@ const Page = () => {
 
     setCheckingDelivery(true);
     
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    // Mock delivery data based on pincode
-    const deliveryData = {
-      pinCode: code,
-      deliveryDate: calculateDeliveryDate(code),
-      deliveryTime: "3-5 business days",
-      isServiceable: true,
-      charges: 0, // Free shipping
-    };
-
-    setDeliveryInfo(deliveryData);
-    setCheckingDelivery(false);
-  };
-
-  // Calculate delivery date based on pincode (mock logic)
-  const calculateDeliveryDate = (pin) => {
-    const today = new Date();
-    const pinNum = parseInt(pin);
-    
-    // Mock logic: Different regions have different delivery times
-    let daysToAdd = 3; // Default 3 days
-    
-    // Metro cities (mock pincode ranges)
-    if ((pinNum >= 110000 && pinNum <= 110099) || // Delhi
-        (pinNum >= 400000 && pinNum <= 400099) || // Mumbai
-        (pinNum >= 600000 && pinNum <= 600099) || // Chennai
-        (pinNum >= 700000 && pinNum <= 700099)) { // Kolkata
-      daysToAdd = 2; // Faster delivery in metros
-    } else if (pinNum >= 500000 && pinNum <= 500099) { // Hyderabad
-      daysToAdd = 3;
-    } else if (pinNum >= 560000 && pinNum <= 560099) { // Bangalore
-      daysToAdd = 2;
-    } else {
-      daysToAdd = 4; // Standard delivery for other areas
+    try {
+      const res = await pincodesApi.checkPincode(code);
+      
+      if (res.data && res.data.status === "SUCCESS") {
+        const pincodeData = res.data.data;
+        
+        // Calculate dynamic delivery date based on deliveryDays from database
+        const today = new Date();
+        const deliveryDate = new Date(today);
+        deliveryDate.setDate(today.getDate() + (pincodeData.deliveryDays || 3));
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        
+        setDeliveryInfo({
+          pinCode: code,
+          deliveryDate: deliveryDate.toLocaleDateString('en-IN', options),
+          deliveryTime: `${pincodeData.deliveryDays} business days`,
+          isServiceable: pincodeData.isServiceable,
+          charges: pincodeData.charges,
+        });
+      } else {
+        // Handle gracefully resolved errors from apiClient interceptor
+        setDeliveryInfo({
+          error: res.data?.message || "Delivery not available to this PIN code.",
+        });
+      }
+    } catch (error) {
+      setDeliveryInfo({
+        error: error?.message || "Delivery not available to this PIN code.",
+      });
+    } finally {
+      setCheckingDelivery(false);
     }
-
-    const deliveryDate = new Date(today);
-    deliveryDate.setDate(today.getDate() + daysToAdd);
-    
-    // Format date
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    return deliveryDate.toLocaleDateString('en-IN', options);
   };
 
   const handlePinCodeChange = (e) => {
@@ -282,7 +319,7 @@ const Page = () => {
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-3">
                 <div className="text-[30px] font-bold leading-9">
-                  {product.name}
+                  {product?.name}
                 </div>
                 {isOutOfStock && (
                   <div className="bg-red-600 text-white px-3 py-1 rounded font-bold text-sm">
@@ -293,7 +330,7 @@ const Page = () => {
               <div className="flex flex-col gap-1">
                 <div className="text-[18px] text-red-700 font-bold">
                   {formatPrice(unitPrice)}
-                  {product.offerPrice && (
+                  {product?.offerPrice && (
                     <span className="ml-2 text-[16px] text-black font-normal line-through">
                       {product.price}
                     </span>
@@ -302,7 +339,10 @@ const Page = () => {
                 <div className="text-[15px] text-[#757b80]">
                   Prices include GST
                 </div>
-                {!isOutOfStock && product.stock && product.stock > 0 && (
+                <div className="text-[16px] text-gray-700 leading-relaxed mb-4">
+                  {product?.description || "Description not available for this product."}
+                </div>
+                {!isOutOfStock && product?.stock && product.stock > 0 && (
                   <div className="text-[14px] text-green-600 font-semibold">
                     In Stock ({product.stock} available)
                   </div>
@@ -311,12 +351,41 @@ const Page = () => {
             </div>
 
             <div className="flex flex-col gap-5">
-              <div>
+              <div className="flex flex-col gap-2">
                 <div className="font-bold text-[20px]">Color</div>
-                <div className="text-[#757b80] text-[15px]">
-                  PUMA Black-Frosted Ivory
+                <div className="flex items-center gap-3">
+                  {selectedColor?.colorCode && (
+                    <div 
+                      className="w-8 h-8 rounded-full border border-gray-300 shadow-sm"
+                      style={{ backgroundColor: selectedColor.colorCode }}
+                    ></div>
+                  )}
+                  <div className="text-[#757b80] text-[15px] font-medium">
+                    {selectedColor?.colorName || "PUMA Black-Frosted Ivory"}
+                  </div>
                 </div>
               </div>
+              
+              {/* Color Swatch Selection */}
+              {(product?.colors && product.colors.length > 0) && (
+                <div className="flex gap-3 flex-wrap mt-1">
+                  {product.colors.map((c, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setSelectedColor(c)}
+                      className={`w-10 h-10 rounded-full border-2 transition-all cursor-pointer ${
+                        selectedColor?.colorName === c.colorName 
+                          ? "border-black shadow-md scale-110" 
+                          : "border-gray-200 hover:border-gray-400"
+                      }`}
+                      style={{ backgroundColor: c.colorCode }}
+                      title={c.colorName}
+                      aria-label={`Select color ${c.colorName}`}
+                    />
+                  ))}
+                </div>
+              )}
+
               <div className="flex gap-2 items-center">
                 {images.map((img, index) => (
                   <div
@@ -553,9 +622,13 @@ const Page = () => {
                             ({deliveryInfo.deliveryTime})
                           </div>
                         </div>
-                        {deliveryInfo.charges === 0 && (
+                        {deliveryInfo.charges === 0 ? (
                           <div className="text-green-700 text-sm font-semibold mt-1">
                             Free shipping available
+                          </div>
+                        ) : (
+                          <div className="text-gray-700 text-sm font-semibold mt-1">
+                            Shipping charges: ₹{deliveryInfo.charges}
                           </div>
                         )}
                       </div>
@@ -576,8 +649,8 @@ const Page = () => {
               />
               <div>
                 <ul className="list-disc pl-5">
-                  <li>Style: 399029_02</li>
-                  <li>Color: {product.color || "PUMA White-Frosted Ivory"}</li>
+                  <li>Style: {product?.styleNumber || "399029_02"}</li>
+                  <li>Color: {selectedColor?.colorName || product?.color || "PUMA White-Frosted Ivory"}</li>
                 </ul>
               </div>
             </div>

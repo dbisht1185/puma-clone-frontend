@@ -9,6 +9,7 @@ import {
 } from "@/utils/cartStorage";
 import { useToast } from "./toaster";
 import { parsePrice } from "@/utils/price";
+import { wishlistApi } from "@/mocks/wishlist";
 
 const WISHLIST_STORAGE_KEY = "puma_wishlist";
 
@@ -36,20 +37,9 @@ export const useWishlist = () => {
  * }
  */
 
-// Initialize wishlist from localStorage (client-side only)
-const getInitialWishlist = () => {
-  if (typeof window === "undefined") return [];
-  try {
-    return getWishlistFromStorage();
-  } catch (error) {
-    console.error("Error loading initial wishlist:", error);
-    return [];
-  }
-};
-
 export const WishlistProvider = ({ children }) => {
-  const [wishlist, setWishlist] = useState(getInitialWishlist);
-  const [isLoading, setIsLoading] = useState(false);
+  const [wishlist, setWishlist] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { setAlert } = useToast();
 
   // Load wishlist from storage on mount (for API sync when logged in)
@@ -58,14 +48,15 @@ export const WishlistProvider = ({ children }) => {
       setIsLoading(true);
       try {
         if (isUserLoggedIn()) {
-          // TODO: Load from API when backend is ready
-          // const response = await fetch('/api/wishlist');
-          // const data = await response.json();
-          // setWishlist(data.items || []);
-          // For now, use localStorage even when logged in
-          const storedWishlist = getWishlistFromStorage();
-          if (storedWishlist.length > 0) {
-            setWishlist(storedWishlist);
+          const res = await wishlistApi.getWishlist();
+          if (res.data?.status === "SUCCESS") {
+            setWishlist(res.data.data);
+            saveWishlistToStorage(res.data.data);
+          } else {
+            const storedWishlist = getWishlistFromStorage();
+            if (storedWishlist.length > 0) {
+              setWishlist(storedWishlist);
+            }
           }
         } else {
           const storedWishlist = getWishlistFromStorage();
@@ -74,7 +65,7 @@ export const WishlistProvider = ({ children }) => {
           }
         }
       } catch (error) {
-        console.error("Error loading wishlist:", error);
+        console.error("Error loading wishlist from database:", error);
       } finally {
         setIsLoading(false);
       }
@@ -94,18 +85,11 @@ export const WishlistProvider = ({ children }) => {
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
-  // Save wishlist to storage whenever it changes (immediately, not waiting for loading)
+  // Save wishlist to storage whenever it changes (immediately, backup for offline/offline mode)
   useEffect(() => {
     if (typeof window !== "undefined") {
       try {
-        if (isUserLoggedIn()) {
-          // TODO: Sync with API when backend is ready
-          // saveWishlistToAPI(wishlist);
-          // For now, also save to localStorage as backup
-          saveWishlistToStorage(wishlist);
-        } else {
-          saveWishlistToStorage(wishlist);
-        }
+        saveWishlistToStorage(wishlist);
       } catch (error) {
         console.error("Error saving wishlist to storage:", error);
       }
@@ -122,7 +106,7 @@ export const WishlistProvider = ({ children }) => {
 
   // Add to wishlist
   const addToWishlist = useCallback(
-    (product) => {
+    async (product) => {
       const { productId, name, image, basePrice, discountType = null, discountValue = 0, slug } =
         product;
 
@@ -144,53 +128,108 @@ export const WishlistProvider = ({ children }) => {
         return false;
       }
 
-      setWishlist((prevWishlist) => {
-        const newItem = {
-          id: productId,
-          productId,
-          name,
-          image,
-          basePrice: typeof basePrice === "string" ? parseFloat(basePrice.replace(/[₹,\s]/g, "")) || 0 : basePrice,
-          discountType,
-          discountValue,
-          slug: slug || productId,
-        };
+      const newItem = {
+        id: productId,
+        productId,
+        name,
+        image,
+        basePrice: typeof basePrice === "string" ? parseFloat(basePrice.replace(/[₹,\s]/g, "")) || 0 : basePrice,
+        discountType,
+        discountValue,
+        slug: slug || productId,
+      };
+
+      if (isUserLoggedIn()) {
+        try {
+          const res = await wishlistApi.addToWishlist(newItem);
+          if (res.data?.status === "SUCCESS") {
+            setWishlist(res.data.data);
+            setAlert({
+              open: true,
+              message: "Added to wishlist",
+              severity: "success",
+            });
+            return true;
+          } else {
+            setAlert({
+              open: true,
+              message: res.data?.message || "Failed to add to wishlist",
+              severity: "error",
+            });
+            return false;
+          }
+        } catch (error) {
+          console.error(error);
+          setAlert({
+            open: true,
+            message: "Failed to add to wishlist",
+            severity: "error",
+          });
+          return false;
+        }
+      } else {
+        setWishlist((prevWishlist) => [...prevWishlist, newItem]);
         setAlert({
           open: true,
           message: "Added to wishlist",
           severity: "success",
         });
-        return [...prevWishlist, newItem];
-      });
-
-      return true;
+        return true;
+      }
     },
     [isInWishlist, setAlert]
   );
 
   // Remove from wishlist
   const removeFromWishlist = useCallback(
-    (productId) => {
-      setWishlist((prevWishlist) => {
-        const updatedWishlist = prevWishlist.filter((item) => item.productId !== productId);
-        setAlert({
-          open: true,
-          message: "Removed from wishlist",
-          severity: "success",
+    async (productId) => {
+      if (isUserLoggedIn()) {
+        try {
+          const res = await wishlistApi.removeFromWishlist(productId);
+          if (res.data?.status === "SUCCESS") {
+            setWishlist(res.data.data);
+            setAlert({
+              open: true,
+              message: "Removed from wishlist",
+              severity: "success",
+            });
+          } else {
+            setAlert({
+              open: true,
+              message: res.data?.message || "Failed to remove from wishlist",
+              severity: "error",
+            });
+          }
+        } catch (error) {
+          console.error(error);
+          setAlert({
+            open: true,
+            message: "Failed to remove from wishlist",
+            severity: "error",
+          });
+        }
+      } else {
+        setWishlist((prevWishlist) => {
+          const updatedWishlist = prevWishlist.filter((item) => item.productId !== productId);
+          setAlert({
+            open: true,
+            message: "Removed from wishlist",
+            severity: "success",
+          });
+          return updatedWishlist;
         });
-        return updatedWishlist;
-      });
+      }
     },
     [setAlert]
   );
 
   // Toggle wishlist (add if not present, remove if present)
   const toggleWishlist = useCallback(
-    (product) => {
+    async (product) => {
       if (isInWishlist(product.productId)) {
-        removeFromWishlist(product.productId);
+        await removeFromWishlist(product.productId);
       } else {
-        addToWishlist(product);
+        await addToWishlist(product);
       }
     },
     [isInWishlist, addToWishlist, removeFromWishlist]
