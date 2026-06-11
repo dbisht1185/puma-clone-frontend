@@ -62,6 +62,7 @@ const CardDetails = ({ compact = false }) => {
                     width={200}
                     height={200}
                     className="object-contain mix-blend-multiply w-full h-auto"
+                    unoptimized={typeof item.image === 'string' && item.image.startsWith('http')}
                   />
                   {item.stock > 0 && (
                     <div className="absolute top-2 left-2 bg-[#eaf8ee] border border-[#c4d477] flex items-center justify-center rounded-full gap-1 px-2 py-0.5 shadow-sm">

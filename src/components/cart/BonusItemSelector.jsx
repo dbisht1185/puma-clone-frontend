@@ -147,6 +147,7 @@ const BonusItemSelector = ({ open, onClose }) => {
                     fill
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     className="object-contain rounded"
+                    unoptimized={typeof item.image === 'string' && item.image.startsWith('http')}
                     onError={(e) => {
                       // Fallback to placeholder if image fails to load
                       e.target.onerror = null;

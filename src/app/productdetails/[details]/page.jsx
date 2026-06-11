@@ -39,31 +39,28 @@ const Page = () => {
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [selectedColor, setSelectedColor] = useState(null);
 
-  const slug = params.details;
+  const slug = decodeURIComponent(params.details);
 
   // Use TanStack Query to fetch the full database product dynamically
-  const { data: product = {
-    productId: slug,
-    slug: slug,
-    name: "Easy Rider Leather Unisex Sneakers",
-    price: "₹8,999",
-    offerPrice: "₹7,199",
-    description: "",
-    img: "/Images/Products/cards/Easy-Rider-Leather-Unisex-Sneakers2.jpeg",
-    basePrice: 8999,
-    discountType: "PERCENT",
-    discountValue: 20,
-    stock: 10,
-  }, isLoading: dbLoading } = useQuery({
+  const { data: product, isLoading: dbLoading } = useQuery({
     queryKey: ["product", slug],
     queryFn: async () => {
-      const res = await productsApi.getProductByIdOrSlug(slug);
-      return res.data?.status === "SUCCESS" ? res.data.data : null;
+      try {
+        const res = await productsApi.getProductByIdOrSlug(slug);
+        if (res?.data?.status === "SUCCESS" && res?.data?.data) {
+          return res.data.data;
+        }
+      } catch (err) {}
+      // Fallback to CardDatas if backend fails or doesn't exist
+      return CardDatas.find((item) => item.slug === slug || item.productId === slug) || null;
     },
     initialData: () => {
       return CardDatas.find((item) => item.slug === slug || item.productId === slug);
     },
+    staleTime: Infinity,
   });
+
+  const isLoading = dbLoading && !product;
 
   // Track recently viewed products in localStorage for dynamic Block11 homepage rendering
   useEffect(() => {
@@ -108,13 +105,7 @@ const Page = () => {
   const isOutOfStock = (product?.stock || 0) === 0;
   
   // Available sizes dynamically pulled from database, falling back to static
-  const sizes = product?.sizes && product.sizes.length > 0 ? product.sizes : [
-    { size: "UK 5", stock: 3 },
-    { size: "UK 6", stock: 5 },
-    { size: "UK 11", stock: 2 },
-    { size: "UK 12", stock: 0 },
-    { size: "UK 13", stock: 1 },
-  ];
+  const sizes = product?.sizes || [];
 
   const basePrice = product?.basePrice || parsePrice(product?.price || 0);
   const discountType = product?.discountType || (product?.offerPrice ? "PERCENT" : null);
@@ -131,11 +122,7 @@ const Page = () => {
     setSelectedImageIndex(index);
   };
 
-  const images = product?.images && product.images.length > 0 ? product.images : [
-    product?.img || "/Images/Products/cards/Easy-Rider-Leather-Unisex-Sneakers2.jpeg",
-    "/Images/Products/cards/Easy-Rider-Leather-Unisex-Sneakers (6).jpeg",
-    "/Images/Products/cards/Easy-Rider-Mesh-Unisex-Sneakers.jpeg",
-  ];
+  const images = product?.images && product.images.length > 0 ? product.images : (product?.img ? [product.img] : []);
 
   const handleSelect = (qty) => {
     const selectedSizeData = sizes.find((s) => s.size === selectedSize);
@@ -284,6 +271,27 @@ const Page = () => {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="w-full lg:px-10 px-3 py-10 flex flex-col gap-5 min-h-[60vh] justify-center items-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-black"></div>
+        <div className="text-xl font-bold mt-4">Loading Product Details...</div>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="w-full lg:px-10 px-3 py-10 flex flex-col gap-5 min-h-[60vh] justify-center items-center text-center">
+        <h1 className="text-4xl font-bold text-gray-800">Product Not Found</h1>
+        <p className="text-lg text-gray-600 mt-2">The product you are looking for does not exist or has been removed.</p>
+        <Link href="/" className="mt-6 px-6 py-3 bg-black text-white font-bold rounded-sm hover:bg-gray-800 transition-colors">
+          RETURN TO HOME
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full lg:px-10 px-3 py-10 flex flex-col gap-5">
       <div className="w-full">
@@ -299,7 +307,7 @@ const Page = () => {
                 fontWeight:
                   index === NavigationDatass.length - 1 ? "normal" : "bold",
               }}>
-              {item.label}
+              {index === NavigationDatass.length - 1 ? (product?.name || item.label) : item.label}
             </Link>
             {index < NavigationDatass.length - 1 && (
               <span style={{ margin: "0 5px", color: "grey" }}> • </span>
@@ -310,7 +318,7 @@ const Page = () => {
       <div className="grid md:grid-cols-12 grid-cols-1 gap-5 relative w-full ">
         {/* left */}
         <div className="w-full lg:col-span-8 md:col-span-12 col-span-8 h-full overflow-auto">
-          <Photos />
+          <Photos images={images} />
         </div>
 
         {/* right  */}
@@ -406,6 +414,7 @@ const Page = () => {
                       width={60}
                       height={50}
                       objectFit="cover"
+                      unoptimized={typeof img === 'string' && img.startsWith('http')}
                     />
                   </div>
                 ))}

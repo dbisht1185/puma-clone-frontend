@@ -63,6 +63,7 @@ const Cards = ({ filteredProducts = null }) => {
                     sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
                     className={`object-contain ${isOutOfStock ? "opacity-60" : ""} ${isLoading ? "opacity-70 blur-[1px]" : ""}`}
                     priority={index < 4}
+                    unoptimized={typeof item.img === 'string' && item.img.startsWith('http')}
                   />
                   
                   {/* Loading Overlay */}

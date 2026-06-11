@@ -225,7 +225,7 @@ html.dark, html.dark body, html.dark main {
 html.dark .bg-gray-50,
 html.dark div.bg-gray-50,
 html.dark .bg-white,
-html.dark .bg-[#f6f7f8],
+html.dark .bg-\[\#f6f7f8\],
 html.dark .bg-gray-100 {
   background: #0e0e11 !important;
   background-color: #0e0e11 !important;

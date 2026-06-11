@@ -511,6 +511,7 @@ const Page = () => {
                           fill
                           sizes="96px"
                           className="object-contain rounded"
+                          unoptimized={typeof item.image === 'string' && item.image.startsWith('http')}
                         />
                       </div>
                       <div className="flex-1 flex flex-col gap-1">

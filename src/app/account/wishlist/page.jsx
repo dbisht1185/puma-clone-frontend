@@ -109,6 +109,7 @@ const Page = () => {
                           fill
                           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                           className="object-contain group-hover:scale-105 transition-transform duration-300"
+                          unoptimized={typeof item.image === 'string' && item.image.startsWith('http')}
                         />
                         {/* Remove from wishlist button */}
                         <button
