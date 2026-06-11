@@ -39,7 +39,7 @@ const Page = () => {
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [selectedColor, setSelectedColor] = useState(null);
 
-  const slug = decodeURIComponent(params.details);
+  const slug = decodeURIComponent(params.details).replace(/\s+/g, '-').toLowerCase();
 
   // Use TanStack Query to fetch the full database product dynamically
   const { data: product, isLoading: dbLoading } = useQuery({
