@@ -755,6 +755,10 @@ export default function AdminProductsPage() {
                           <option value="girls">Girls Only</option>
                           <option value="kids">Small Kids Only</option>
                           <option value="unisex-kids">Unisex - Kids</option>
+                          <option value="motorsports">Motorsports</option>
+                          <option value="sports">Sports</option>
+                          <option value="collaborations">Collaborations</option>
+                          <option value="outlets">Outlets</option>
                         </select>
                       </div>
 
@@ -775,6 +779,10 @@ export default function AdminProductsPage() {
                           <option value="footwear">Footwear</option>
                           <option value="apparel">Apparel</option>
                           <option value="accessories">Accessories</option>
+                          <option value="motorsports">Motorsports</option>
+                          <option value="sports">Sports</option>
+                          <option value="collaborations">Collaborations</option>
+                          <option value="outlets">Outlets</option>
                         </select>
                       </div>
 
@@ -1254,6 +1262,10 @@ export default function AdminProductsPage() {
                           <option value="girls">Girls Only</option>
                           <option value="kids">Small Kids Only</option>
                           <option value="unisex-kids">Unisex - Kids</option>
+                          <option value="motorsports">Motorsports</option>
+                          <option value="sports">Sports</option>
+                          <option value="collaborations">Collaborations</option>
+                          <option value="outlets">Outlets</option>
                         </select>
                       </div>
 
@@ -1274,6 +1286,10 @@ export default function AdminProductsPage() {
                           <option value="footwear">Footwear</option>
                           <option value="apparel">Apparel</option>
                           <option value="accessories">Accessories</option>
+                          <option value="motorsports">Motorsports</option>
+                          <option value="sports">Sports</option>
+                          <option value="collaborations">Collaborations</option>
+                          <option value="outlets">Outlets</option>
                         </select>
                       </div>
 

@@ -50,30 +50,16 @@ const Page = () => {
         if (res?.data?.status === "SUCCESS" && res?.data?.data) {
           return res.data.data;
         }
-      } catch (err) {}
-      // Fallback to CardDatas — try exact match first
+      } catch (err) {
+        console.error("API fetch failed, trying fallback:", err);
+      }
+      
+      // Fallback to CardDatas — STRICT EXACT MATCH ONLY
       const exact = CardDatas.find((item) => item.slug === slug || item.productId === slug);
       if (exact) return exact;
-      // Fuzzy fallback: match by keywords from the slug
-      const slugWords = slug.split('-').filter(w => w.length > 2);
-      const fuzzy = CardDatas.find((item) => {
-        const itemSlug = (item.slug || '').toLowerCase();
-        const matchCount = slugWords.filter(w => itemSlug.includes(w)).length;
-        return matchCount >= Math.max(2, Math.floor(slugWords.length * 0.4));
-      });
-      return fuzzy || null;
-    },
-    initialData: () => {
-      const exact = CardDatas.find((item) => item.slug === slug || item.productId === slug);
-      if (exact) return exact;
-      const slugWords = slug.split('-').filter(w => w.length > 2);
-      return CardDatas.find((item) => {
-        const itemSlug = (item.slug || '').toLowerCase();
-        const matchCount = slugWords.filter(w => itemSlug.includes(w)).length;
-        return matchCount >= Math.max(2, Math.floor(slugWords.length * 0.4));
-      }) || null;
-    },
-    staleTime: Infinity,
+      
+      return null;
+    }
   });
 
   const isLoading = dbLoading && !product;

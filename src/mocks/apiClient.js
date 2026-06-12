@@ -51,8 +51,8 @@ apiClient.interceptors.response.use(
     }
     const errorResponse = error.response;
     
-    // Log errors globally for developer insight
-    console.error("API Error Encountered Globally:", {
+    // Log errors globally for developer insight (using warn to prevent nextjs error overlay)
+    console.warn("API Error Encountered Globally:", {
       status: errorResponse?.status,
       message: errorResponse?.data?.message || error.message,
       url: error.config?.url,

@@ -61,10 +61,20 @@ const Cards = ({ filteredProducts = null }) => {
                     alt={item.name}
                     fill
                     sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                    className={`object-contain ${isOutOfStock ? "opacity-60" : ""} ${isLoading ? "opacity-70 blur-[1px]" : ""}`}
+                    className={`object-contain transition-opacity duration-500 ease-in-out ${item.images && item.images.length > 1 ? "group-hover:opacity-0" : ""} ${isOutOfStock ? "opacity-60" : ""} ${isLoading ? "opacity-70 blur-[1px]" : ""}`}
                     priority={index < 4}
                     unoptimized={typeof item.img === 'string' && item.img.startsWith('http')}
                   />
+                  {item.images && item.images.length > 1 && (
+                    <Image
+                      src={item.images[1]}
+                      alt={`${item.name} alternate`}
+                      fill
+                      sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                      className={`object-contain absolute inset-0 opacity-0 transition-opacity duration-500 ease-in-out group-hover:opacity-100 ${isOutOfStock ? "opacity-60" : ""} ${isLoading ? "opacity-70 blur-[1px]" : ""}`}
+                      unoptimized={typeof item.images[1] === 'string' && item.images[1].startsWith('http')}
+                    />
+                  )}
                   
                   {/* Loading Overlay */}
                   {isLoading && (

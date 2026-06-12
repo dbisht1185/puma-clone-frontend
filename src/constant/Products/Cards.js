@@ -1,5 +1,123 @@
 export const CardDatas = [
     {
+        "productId": "palermo-lth-unisex",
+        "slug": "palermo-lth-unisex-sneakers",
+        "name": "Palermo Lth Unisex Sneakers",
+        "price": "₹6,999",
+        "offerPrice": null,
+        "description": "Step out in classic style with the Palermo Lth Unisex Sneakers. A timeless design perfect for everyday wear.",
+        "img": "/Images/Home/Block1/Palermo-Lth-Unisex-Sneakers.avif",
+        "images": [
+            "/Images/Home/Block1/Palermo-Lth-Unisex-Sneakers.avif",
+            "/Images/Home/Block1/Palermo-Lth-Unisex-Sneakers.avif"
+        ],
+        "basePrice": 6999,
+        "discountType": null,
+        "discountValue": 0,
+        "stock": 30,
+        "gender": "unisex-adults",
+        "category": "footwear",
+        "sizes": [
+            { "size": "UK 6", "stock": 5 },
+            { "size": "UK 7", "stock": 10 },
+            { "size": "UK 8", "stock": 10 },
+            { "size": "UK 9", "stock": 5 }
+        ],
+        "colors": [
+            { "colorName": "Black-White", "colorCode": "#000000" }
+        ],
+        "color": "Black-White",
+        "styleNumber": "396464_01"
+    },
+    {
+        "productId": "darter-pro-fade-unisex",
+        "slug": "darter-pro-fade-unisex-running-shoes",
+        "name": "Darter Pro Fade Unisex Running Shoes",
+        "price": "₹6,999",
+        "offerPrice": null,
+        "description": "Hit your stride with the Darter Pro Fade. Breathable mesh and responsive cushioning.",
+        "img": "/Images/Home/Block1/Darter-Pro-Fade-Unisex-Running-Shoes.avif",
+        "images": [
+            "/Images/Home/Block1/Darter-Pro-Fade-Unisex-Running-Shoes.avif",
+            "/Images/Home/Block1/Darter-Pro-Fade-Unisex-Running-Shoes.avif"
+        ],
+        "basePrice": 6999,
+        "discountType": null,
+        "discountValue": 0,
+        "stock": 30,
+        "gender": "unisex-adults",
+        "category": "footwear",
+        "sizes": [
+            { "size": "UK 6", "stock": 5 },
+            { "size": "UK 7", "stock": 10 },
+            { "size": "UK 8", "stock": 10 }
+        ],
+        "colors": [
+            { "colorName": "Navy-Green", "colorCode": "#000080" }
+        ],
+        "color": "Navy-Green",
+        "styleNumber": "379438_01"
+    },
+    {
+        "productId": "play-loud-suede-xl-unisex",
+        "slug": "play-loud-suede-xl-unisex-sneakers",
+        "name": "PLAY LOUD Suede XL Unisex Sneakers",
+        "price": "₹8,999",
+        "offerPrice": null,
+        "description": "Make a statement with the PLAY LOUD Suede XL. Chunky sole and bold colors.",
+        "img": "/Images/Home/Block1/PLAY-LOUD-Suede-XL-Unisex-Sneakers.avif",
+        "images": [
+            "/Images/Home/Block1/PLAY-LOUD-Suede-XL-Unisex-Sneakers.avif",
+            "/Images/Home/Block1/PLAY-LOUD-Suede-XL-Unisex-Sneakers.avif"
+        ],
+        "basePrice": 8999,
+        "discountType": null,
+        "discountValue": 0,
+        "stock": 30,
+        "gender": "unisex-adults",
+        "category": "footwear",
+        "sizes": [
+            { "size": "UK 6", "stock": 5 },
+            { "size": "UK 7", "stock": 10 },
+            { "size": "UK 8", "stock": 10 }
+        ],
+        "colors": [
+            { "colorName": "Blue-White", "colorCode": "#0000FF" }
+        ],
+        "color": "Blue-White",
+        "styleNumber": "396464_02"
+    },
+    {
+        "productId": "softride-pro-coast-res-unisex",
+        "slug": "softride-pro-coast-res-unisex-running-shoes",
+        "name": "Softride Pro Coast Res Unisex Running Shoes",
+        "price": "₹7,999",
+        "offerPrice": null,
+        "description": "Experience ultimate comfort with the Softride Pro Coast Res. Perfect for daily runs and casual wear.",
+        "img": "/Images/Home/Block1/Softride-Pro-Coast-Res-Unisex-Running-Shoes.avif",
+        "images": [
+            "/Images/Home/Block1/Softride-Pro-Coast-Res-Unisex-Running-Shoes.avif",
+            "/Images/Products/cards/Softride-Pro-Coast-Res-Unisex-Running-Shoes (2).jpeg",
+            "/Images/Products/cards/Softride-Pro-Coast-Res-Unisex-Running-Shoes (3).jpeg"
+        ],
+        "basePrice": 7999,
+        "discountType": null,
+        "discountValue": 0,
+        "stock": 30,
+        "gender": "unisex-adults",
+        "category": "footwear",
+        "sizes": [
+            { "size": "UK 6", "stock": 5 },
+            { "size": "UK 7", "stock": 10 },
+            { "size": "UK 8", "stock": 10 }
+        ],
+        "colors": [
+            { "colorName": "Black-White", "colorCode": "#000000" }
+        ],
+        "color": "Black-White",
+        "styleNumber": "379438_02"
+    },
+    {
         "productId": "fade-pro-1",
         "slug": "fade-pro-running-shoes",
         "name": "Fade Pro Running Shoes",
